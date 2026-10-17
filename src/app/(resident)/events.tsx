@@ -33,13 +33,12 @@ export default function EventsScreen() {
   const past = posts.filter((post) => !post.upcoming);
 
   return (
-    <Screen onRefresh={load}>
-      <PageTitle
-        kicker="Community"
-        title="Events"
-        detail="The date sits beside the plan. An RSVP means you are going."
-        action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=event")} /> : undefined}
-      />
+    <Screen
+      title="Events"
+      onRefresh={load}
+      action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=event")} /> : undefined}
+    >
+      <PageTitle kicker="Community" detail="The date sits beside the plan. An RSVP means you are going." />
       {message ? <Banner text={message} /> : null}
       {!ready ? <Loading /> : null}
       {ready && !available ? <Empty title="Events unavailable" detail="Events are not available on your account." /> : null}

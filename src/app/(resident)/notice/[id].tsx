@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Text } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { HtmlBody } from "@/components/HtmlText";
+import { Loading, Note, Screen } from "@/components/Screen";
 import { loadNotice, markNoticeRead } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -34,14 +35,12 @@ export default function NoticeScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen>
-      <Back />
+    <Screen title={notice?.title || "Notice"}>
       {!ready ? <Loading /> : null}
       {notice ? (
         <>
           <Text style={ui.label}>{notice.important ? "Important" : notice.label} · {notice.date}</Text>
-          <Text style={ui.title}>{notice.title}</Text>
-          <Text style={ui.body}>{notice.body || "No further detail."}</Text>
+          {notice.body ? <HtmlBody html={notice.body} /> : <Text style={ui.body}>No further detail.</Text>}
         </>
       ) : null}
       {ready && !notice && !message ? <Text style={ui.body}>This notice is not available.</Text> : null}

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Alert, Image, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Avatar, Banner, PageTitle, Panel, SectionLabel } from "@/components/Blocks";
+import { HtmlBody } from "@/components/HtmlText";
 import { Loading, Screen } from "@/components/Screen";
 import {
   closePoll,
@@ -90,10 +91,9 @@ export default function PostScreen() {
   }
 
   return (
-    <Screen onRefresh={load}>
+    <Screen title={post?.label || "Post"} onRefresh={load}>
       <PageTitle
-        kicker={post?.label || "Community"}
-        title={post?.author || "Post"}
+        kicker={post?.author || "Community"}
         detail={post ? [post.flat, post.date].filter(Boolean).join(" · ") : undefined}
       />
       {!ready ? <Loading /> : null}
@@ -103,7 +103,7 @@ export default function PostScreen() {
           <Panel>
             {post.startsLabel ? <Text style={ui.meta}>Date · {post.startsLabel}</Text> : null}
             {post.sold ? <Text style={{ color: colors.goldInk, fontFamily: fonts.display, fontWeight: "600" }}>Marked sold</Text> : null}
-            <Text style={{ color: colors.ink, fontFamily: fonts.body, fontSize: 17, lineHeight: 25 }}>{post.body}</Text>
+            <HtmlBody html={post.body} />
             {post.image ? (
               <Image source={{ uri: post.image }} style={{ width: "100%", height: 220, borderRadius: 16, backgroundColor: colors.line }} />
             ) : null}
@@ -188,7 +188,7 @@ export default function PostScreen() {
                 <Avatar name={item.author} size={34} />
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={ui.meta}>{item.who} · {item.date}</Text>
-                  <Text style={{ color: colors.ink, fontFamily: fonts.body, fontSize: 15, lineHeight: 21 }}>{item.body}</Text>
+                  <HtmlBody html={item.body} style={{ fontSize: 15, lineHeight: 21 }} />
                   {item.canDelete ? (
                     <Pressable onPress={() => run(async () => { await removeReply(item.id); return "Reply removed."; })}>
                       <Text style={[ui.quietText, { textAlign: "left" }]}>Delete</Text>

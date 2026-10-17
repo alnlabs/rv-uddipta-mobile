@@ -224,6 +224,13 @@ function mapReply(raw: Record<string, unknown>): Reply {
   };
 }
 
+export async function loadMyUpcomingEvents() {
+  const board = await loadBoard();
+  return board.posts
+    .filter((post) => post.kind === "event" && post.upcoming && post.going)
+    .slice(0, 3);
+}
+
 export async function loadBoard() {
   const { data, error } = await supabase.rpc("community_board");
   dbError(error, "Could not load the community.");

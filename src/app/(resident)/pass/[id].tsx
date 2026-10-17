@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { Loading, Note, Screen } from "@/components/Screen";
 import { answerArrival, cancelPass, decidePass, loadPass } from "@/lib/community";
 import { colors, fonts, ui } from "@/theme";
 
@@ -50,9 +50,7 @@ export default function PassScreen() {
   }
 
   return (
-    <Screen onRefresh={load}>
-      <Back />
-      <Text style={ui.eyebrow}>Visitor pass</Text>
+    <Screen title="Visitor pass" onRefresh={load}>
       {!ready ? <Loading /> : null}
       {pass ? (
         <View style={ui.card}>

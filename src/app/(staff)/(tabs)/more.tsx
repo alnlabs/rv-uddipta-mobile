@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { HtmlBody } from "@/components/HtmlText";
 import { RoleSwitch } from "@/components/RoleSwitch";
 import { Loading, Note, Screen, SignOut } from "@/components/Screen";
 import { loadAccount, loadNotices, loadTasks } from "@/lib/community";
@@ -66,7 +67,7 @@ function ViewNotice({ title, body }: { title: string; body: string }) {
   return (
     <View style={ui.card}>
       <Text style={ui.cardTitle}>{title}</Text>
-      {body ? <Text style={ui.body}>{body}</Text> : null}
+      {body ? <HtmlBody html={body} lines={4} /> : null}
     </View>
   );
 }

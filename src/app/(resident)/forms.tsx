@@ -48,8 +48,8 @@ export default function FormsScreen() {
   const closed = forms.filter((form) => form.closed);
 
   return (
-    <Screen onRefresh={load}>
-      <PageTitle kicker="Community" title="Forms" detail="Each home sends one answer. Sending again updates that answer." />
+    <Screen title="Forms" onRefresh={load}>
+      <PageTitle kicker="Community" detail="Each home sends one answer. Sending again updates that answer." />
       {message ? <Banner text={message} /> : null}
       {!ready ? <Loading /> : null}
       {ready && !available ? <Empty title="Forms unavailable" detail="Forms are not available on your account." /> : null}

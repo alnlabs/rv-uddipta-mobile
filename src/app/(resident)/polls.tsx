@@ -33,13 +33,12 @@ export default function PollsScreen() {
   const closed = posts.filter((post) => post.closed);
 
   return (
-    <Screen onRefresh={load}>
-      <PageTitle
-        kicker="Community"
-        title="Polls"
-        detail="A single-choice poll keeps your latest vote. More than one choice can be changed until it closes."
-        action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=poll")} /> : undefined}
-      />
+    <Screen
+      title="Polls"
+      onRefresh={load}
+      action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=poll")} /> : undefined}
+    >
+      <PageTitle kicker="Community" detail="A single-choice poll keeps your latest vote. More than one choice can be changed until it closes." />
       {message ? <Banner text={message} /> : null}
       {!ready ? <Loading /> : null}
       {ready && !available ? <Empty title="Polls unavailable" detail="Polls are not available on your account." /> : null}

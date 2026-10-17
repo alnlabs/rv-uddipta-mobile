@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { Loading, Note, Screen } from "@/components/Screen";
 import { loadRequests, replyRequest } from "@/lib/community";
 import { colors, ui } from "@/theme";
 
@@ -28,9 +28,13 @@ export default function RequestScreen() {
 
   async function send() {
     if (!item) return;
+    if (reply.trim().length < 2) {
+      setMessage("Write a few words first.");
+      return;
+    }
     setMessage("");
     try {
-      const sent = await replyRequest(item.id, reply);
+      const sent = await replyRequest(item.id, reply.trim());
       setReply("");
       await load();
       setMessage(sent);
@@ -40,13 +44,11 @@ export default function RequestScreen() {
   }
 
   return (
-    <Screen onRefresh={load}>
-      <Back />
+    <Screen title={item?.category || "Complaint"} onRefresh={load}>
       {!ready ? <Loading /> : null}
       {item ? (
         <>
           <Text style={ui.label}>{item.status} · {item.date}</Text>
-          <Text style={ui.title}>{item.kind}</Text>
           <Text style={ui.body}>{item.body}</Text>
           {item.messages.map((line) => (
             <View key={line.id} style={ui.card}>

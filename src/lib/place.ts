@@ -12,6 +12,7 @@ export type Account = {
   roles: AccountRole[]
   canSwitch: boolean
   flatNumber: string | null
+  wing: string | null
   home: string | null
 };
 

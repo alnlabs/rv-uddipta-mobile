@@ -24,7 +24,7 @@ export const fonts = {
 
 export const tabBar = {
   headerShown: false,
-  tabBarActiveTintColor: colors.button,
+  tabBarActiveTintColor: colors.gold,
   tabBarInactiveTintColor: colors.muted,
   tabBarStyle: {
     backgroundColor: colors.white,
@@ -66,6 +66,12 @@ export const ui = StyleSheet.create({
     fontSize: 32,
     fontWeight: "600",
     letterSpacing: -0.4,
+  },
+  heading: {
+    color: colors.ink,
+    fontFamily: fonts.display,
+    fontSize: 22,
+    fontWeight: "600",
   },
   body: {
     color: colors.muted,

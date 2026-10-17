@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { Loading, Note, Screen } from "@/components/Screen";
 import { loadRequests } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -25,17 +25,15 @@ export default function RequestsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen onRefresh={load}>
-      <Back />
-      <Text style={ui.eyebrow}>Office</Text>
-      <Text style={ui.title}>My requests</Text>
+    <Screen title="Complaints" onRefresh={load}>
       {message ? <Note text={message} /> : null}
       {!ready ? <Loading /> : null}
-      {ready && items.length === 0 ? <Text style={ui.body}>No requests yet.</Text> : null}
+      {ready && items.length === 0 ? <Text style={ui.body}>No complaints yet.</Text> : null}
       {items.map((item) => (
-        <Pressable key={item.id} onPress={() => router.push(`/(resident)/request/${item.id}`)} style={ui.card}>
-          <Text style={ui.label}>{item.status} · {item.date}</Text>
+        <Pressable key={item.id} accessibilityRole="button" onPress={() => router.push(`/(resident)/request/${item.id}`)} style={ui.card}>
+          <Text style={ui.label}>{item.category} · {item.status}</Text>
           <Text style={ui.cardTitle}>{item.body}</Text>
+          <Text style={ui.meta}>{item.date}</Text>
         </Pressable>
       ))}
     </Screen>

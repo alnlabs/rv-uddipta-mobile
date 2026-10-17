@@ -1,3 +1,4 @@
+import { htmlToPlain } from "@/lib/html";
 import { supabase } from "@/lib/supabase";
 import { type Account } from "@/lib/place";
 
@@ -39,10 +40,6 @@ function when(value: string) {
   });
 }
 
-function plain(value: string) {
-  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
 function dbError(error: { message: string } | null, fallback: string) {
   if (!error) return;
   const message = error.message || fallback;
@@ -66,13 +63,15 @@ export async function loadAccount(): Promise<Account> {
   const role = profile?.role || "visitor";
   const name = profile?.display_name || String(user.user_metadata?.full_name || user.email || "");
   let flatNumber: string | null = null;
+  let wing: string | null = null;
   if (profile?.flat_id) {
     const { data: flat } = await supabase
       .from("flats_public")
-      .select("flat_number")
+      .select("flat_number, wing")
       .eq("id", profile.flat_id)
       .maybeSingle();
     flatNumber = flat?.flat_number ? String(flat.flat_number) : null;
+    wing = flat?.wing ? String(flat.wing) : null;
   }
 
   const { data: held } = await supabase.from("person_roles").select("role").eq("user_id", user.id);
@@ -87,6 +86,7 @@ export async function loadAccount(): Promise<Account> {
     roles: roleNames.map((item) => ({ role: item, label: label(item) })),
     canSwitch: roleNames.length > 1,
     flatNumber: place === "home" ? flatNumber : null,
+    wing: place === "home" ? wing : null,
     home: place === "home" && !flatNumber ? "No home is linked to this account yet." : null,
   };
 }
@@ -126,7 +126,7 @@ export async function loadUpdates() {
       id: notice.id as number,
       label: noticeLabel(String(notice.kind)),
       title: String(notice.title || ""),
-      body: plain(String(notice.body || "")),
+      body: String(notice.body || ""),
       date: when(String(notice.created_at)),
     })),
     updates: postError
@@ -137,7 +137,7 @@ export async function loadUpdates() {
             id: post.id as number,
             label: "Update",
             who: post.flat_number ? `${post.author_name} · ${post.flat_number}` : String(post.author_name),
-            body: plain(String(post.body || "")),
+            body: String(post.body || ""),
             date: when(String(post.created_at)),
           })),
   };
@@ -215,7 +215,7 @@ export async function loadRequests() {
   const account = await loadAccount();
   const { data: notes, error } = await supabase
     .from("member_notes")
-    .select("id, kind, body, status, created_at")
+    .select("id, kind, body, status, category, created_at")
     .order("created_at", { ascending: false })
     .limit(40);
   dbError(error, "Could not load requests.");
@@ -231,7 +231,8 @@ export async function loadRequests() {
     canSend: account.role !== "visitor",
     requests: (notes ?? []).map((note) => ({
       id: note.id as number,
-      kind: note.kind === "feedback" ? "Feedback" : "Request",
+      kind: note.kind === "feedback" ? "Feedback" : "Complaint",
+      category: String(note.category || "General"),
       body: String(note.body),
       status: REQUEST_STATUS[String(note.status)] || NOTE_STATUS[String(note.status)] || String(note.status),
       date: when(String(note.created_at)),
@@ -247,13 +248,23 @@ export async function loadRequests() {
   };
 }
 
-export const REQUEST_CATEGORIES = ["Plumbing", "Electrical", "Housekeeping", "Lift", "Security", "Other"];
+export const REQUEST_CATEGORIES = [
+  "Water",
+  "Electricity",
+  "Lift",
+  "Plumbing",
+  "Cleaning",
+  "Security",
+  "Parking",
+  "Common areas",
+  "Other",
+];
 
 const REQUEST_STATUS: Record<string, string> = {
   new: "Submitted",
   open: "Submitted",
-  waiting: "Acknowledged",
-  read: "Acknowledged",
+  waiting: "Awaiting information",
+  read: "Awaiting information",
   in_progress: "In progress",
   done: "Resolved",
 };
@@ -279,8 +290,9 @@ export async function loadAttention() {
   ]);
   return {
     waitingVisitors: passes.passes.filter((pass) => pass.canDecide || pass.atGate),
-    waitingRequests: requests.requests.filter((item) => item.status === "Acknowledged"),
-    notices: notices.slice(0, 2),
+    waitingRequests: requests.requests.filter((item) => item.status === "Awaiting information"),
+    openRequests: requests.requests.filter((item) => item.status !== "Resolved").slice(0, 3),
+    notices: notices.slice(0, 3),
     unread: notifications.filter((item) => !item.read),
   };
 }
@@ -304,11 +316,70 @@ export async function loadNotices() {
       id: notice.id as number,
       label: noticeLabel(String(notice.kind)),
       important: Boolean(notice.pinned),
+      kind: String(notice.kind),
       title: String(notice.title || "Notice"),
-      body: plain(String(notice.body || "")),
+      body: String(notice.body || ""),
       date: when(String(notice.created_at)),
+      at: String(notice.created_at),
       read: readError ? null : seen.has(notice.id as number),
     }));
+}
+
+const SERVICE_LINES = [
+  { key: "water", label: "Water supply", pattern: /\bwater\b/i },
+  { key: "electricity", label: "Electricity", pattern: /\b(electricity|electric|power)\b/i },
+  { key: "lift", label: "Lift", pattern: /\b(lift|elevator)\b/i },
+] as const;
+
+export type ServiceLine = {
+  key: (typeof SERVICE_LINES)[number]["key"]
+  label: string
+  published: boolean
+  noticeId: number | null
+  title: string | null
+  summary: string | null
+  updated: string | null
+};
+
+export function serviceSnapshot(notices: Awaited<ReturnType<typeof loadNotices>>) {
+  const lines: ServiceLine[] = SERVICE_LINES.map((service) => {
+    const match = notices
+      .filter((notice) => service.pattern.test(htmlToPlain(`${notice.title} ${notice.body}`)))
+      .sort((a, b) => b.at.localeCompare(a.at))[0];
+    if (!match) {
+      return {
+        key: service.key,
+        label: service.label,
+        published: false,
+        noticeId: null,
+        title: null,
+        summary: null,
+        updated: null,
+      };
+    }
+    return {
+      key: service.key,
+      label: service.label,
+      published: true,
+      noticeId: match.id,
+      title: match.title,
+      summary: match.body,
+      updated: match.date,
+    };
+  });
+  const newest = notices
+    .filter((notice) => SERVICE_LINES.some((service) => service.pattern.test(htmlToPlain(`${notice.title} ${notice.body}`))))
+    .sort((a, b) => b.at.localeCompare(a.at))[0];
+  const updated = newest
+    ? new Date(newest.at).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+  return { lines, updated };
 }
 
 export async function markNoticeRead(id: number) {
@@ -335,7 +406,7 @@ export async function loadNotifications() {
     id: item.id as number,
     kind: String(item.kind),
     title: String(item.title),
-    body: plain(String(item.body || "")),
+    body: String(item.body || ""),
     href: String(item.href || ""),
     read: Boolean(item.read_at),
     date: when(String(item.created_at)),

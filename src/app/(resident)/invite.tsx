@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Back, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { createPass, loadPasses } from "@/lib/community";
 import { colors, ui } from "@/theme";
 
@@ -32,10 +32,7 @@ export default function InviteScreen() {
   }
 
   return (
-    <Screen>
-      <Back />
-      <Text style={ui.eyebrow}>Visitors</Text>
-      <Text style={ui.title}>Invite</Text>
+    <Screen title="Invite a visitor">
       <Text style={ui.body}>They show the pass at the gate. They do not get an account.</Text>
       <View style={ui.card}>
         <TextInput value={name} onChangeText={setName} placeholder="Visitor name" placeholderTextColor={colors.placeholder} style={ui.field} />

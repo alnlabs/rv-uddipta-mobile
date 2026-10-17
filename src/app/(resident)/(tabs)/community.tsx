@@ -7,9 +7,8 @@ import { ui } from "@/theme";
 export default function CommunityScreen() {
   const router = useRouter();
   return (
-    <Screen>
-      <Text style={ui.eyebrow}>RV Uddiipta</Text>
-      <Text style={ui.title}>Community</Text>
+    <Screen underHeader>
+      <Text style={ui.heading}>Community</Text>
       <Text style={ui.body}>Posts from neighbours sit apart from official notices.</Text>
       <HubCard
         wide

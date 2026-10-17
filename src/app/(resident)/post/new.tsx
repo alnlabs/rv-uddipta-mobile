@@ -88,8 +88,8 @@ export default function NewPostScreen() {
   }
 
   return (
-    <Screen>
-      <PageTitle kicker={editing ? "Edit" : "Community"} title={editing ? "Edit post" : type.label} detail={type.prompt} />
+    <Screen title={editing ? "Edit post" : type.label}>
+      <PageTitle kicker={editing ? "Edit" : "Community"} detail={type.prompt} />
       {!ready ? <Loading /> : null}
       {!editing && types.length > 1 ? (
         <Chips options={types} value={kind} onChange={setKind} />

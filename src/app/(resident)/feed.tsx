@@ -40,13 +40,12 @@ export default function FeedScreen() {
   const visible = posts.filter((post) => filter === "all" || post.group === filter);
 
   return (
-    <Screen onRefresh={load}>
-      <PageTitle
-        kicker="Residents"
-        title="Feed"
-        detail="Neighbour posts. Office notices stay on their own screen."
-        action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=update")} /> : undefined}
-      />
+    <Screen
+      title="Feed"
+      onRefresh={load}
+      action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=update")} /> : undefined}
+    >
+      <PageTitle kicker="Residents" detail="Neighbour posts. Office notices stay on their own screen." />
       <Chips options={FILTERS} value={filter} onChange={(value) => setFilter(value as (typeof FILTERS)[number]["value"])} />
       {message ? <Banner text={message} /> : null}
       {!ready ? <Loading /> : null}

@@ -1,7 +1,6 @@
 import { type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Icon, type IconName } from "@/components/Icon";
-import { Back } from "@/components/Screen";
 import { colors, fonts, ui } from "@/theme";
 
 export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
@@ -24,23 +23,16 @@ export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
 
 export function PageTitle({
   kicker,
-  title,
   detail,
-  action,
 }: {
   kicker?: string
-  title: string
+  title?: string
   detail?: string
   action?: ReactNode
 }) {
   return (
-    <View style={{ gap: 8 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Back />
-        {action}
-      </View>
+    <View style={{ gap: 6 }}>
       {kicker ? <Text style={ui.eyebrow}>{kicker}</Text> : null}
-      <Text style={ui.title}>{title}</Text>
       {detail ? <Text style={ui.body}>{detail}</Text> : null}
     </View>
   );
@@ -80,9 +72,12 @@ export function Chips({
         return (
           <Pressable
             key={item.value}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={item.label}
             onPress={() => onChange(item.value)}
             style={{
-              minHeight: 36,
+              minHeight: 44,
               paddingHorizontal: 14,
               borderRadius: 999,
               alignItems: "center",

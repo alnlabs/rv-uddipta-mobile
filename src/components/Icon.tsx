@@ -15,6 +15,8 @@ export type IconName =
   | "gate"
   | "schedule"
   | "poll"
+  | "user"
+  | "back"
   | "more";
 
 const stroke = {
@@ -34,7 +36,7 @@ export function Icon({ name, color, size = 22 }: { name: IconName; color: string
 
 export function tabIcon(name: IconName) {
   return ({ color, size }: { color: ColorValue; size: number }) => (
-    <Icon name={name} color={typeof color === "string" ? color : "#1e293b"} size={size} />
+    <Icon name={name} color={typeof color === "string" ? color : "#059669"} size={size} />
   );
 }
 
@@ -124,6 +126,15 @@ function paths(name: IconName, color: string) {
           <Path {...pen} d="M5 19V11M12 19V5M19 19v-6" />
         </>
       );
+    case "user":
+      return (
+        <>
+          <Circle {...pen} cx="12" cy="8" r="3" />
+          <Path {...pen} d="M6.2 19.2v-.8A3.8 3.8 0 0 1 10 14.6h4a3.8 3.8 0 0 1 3.8 3.8v.8" />
+        </>
+      );
+    case "back":
+      return <Path {...pen} d="M15 5 8 12l7 7" />;
     case "more":
       return (
         <>

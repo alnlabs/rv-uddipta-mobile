@@ -1,5 +1,6 @@
 import { Image, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/Blocks";
+import { HtmlBody } from "@/components/HtmlText";
 import { type FeedPost } from "@/lib/feed";
 import { colors, fonts, ui } from "@/theme";
 
@@ -40,9 +41,9 @@ function FeedCard({ post, onPress }: { post: FeedPost; onPress: () => void }) {
         </View>
         <Pill text={post.sold ? "Sold" : post.label} tone={post.sold ? "amber" : "soft"} />
       </View>
-      <Text style={{ color: colors.ink, fontFamily: fonts.body, fontSize: 16, lineHeight: 23, paddingHorizontal: 16, paddingTop: 12 }} numberOfLines={4}>
-        {post.body}
-      </Text>
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <HtmlBody html={post.body} lines={4} />
+      </View>
       {post.image ? (
         <Image source={{ uri: post.image }} style={{ height: 180, marginTop: 12, backgroundColor: colors.line }} />
       ) : null}
@@ -65,7 +66,7 @@ function EventCard({ post, onPress }: { post: FeedPost; onPress: () => void }) {
       </View>
       <View style={{ flex: 1, padding: 14, gap: 6 }}>
         <Pill text={post.label} />
-        <Text style={{ color: colors.ink, fontFamily: fonts.body, fontSize: 16, lineHeight: 22 }} numberOfLines={2}>{post.body}</Text>
+        <HtmlBody html={post.body} lines={2} />
         <Text style={ui.meta}>{post.who}{post.kind === "event" ? ` · ${post.goingCount} going` : ""}</Text>
       </View>
     </Pressable>
@@ -79,9 +80,7 @@ function PollCard({ post, onPress }: { post: FeedPost; onPress: () => void }) {
         <Pill text={post.closed ? "Closed" : "Open"} tone={post.closed ? "ink" : "soft"} />
         <Text style={ui.meta}>{post.who}</Text>
       </View>
-      <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600", lineHeight: 24 }} numberOfLines={3}>
-        {post.body}
-      </Text>
+      <HtmlBody html={post.body} lines={3} style={{ fontFamily: fonts.display, fontSize: 18, fontWeight: "600", lineHeight: 24 }} />
       <View style={{ gap: 8 }}>
         {post.options.slice(0, 3).map((option) => (
           <View key={option.id} style={{ gap: 4 }}>
