@@ -1,22 +1,33 @@
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
+import { isRunningInExpoGo } from "expo";
 import { Platform } from "react-native";
 import { memberFetch } from "@/lib/api";
 import { notificationPath } from "@/lib/community";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+type NotificationsModule = typeof import("expo-notifications");
+
+function loadNotifications(): NotificationsModule | null {
+  if (Platform.OS === "android" && isRunningInExpoGo()) return null;
+  return require("expo-notifications") as NotificationsModule;
+}
+
+const Notifications = loadNotifications();
+
+if (Notifications) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 export async function registerPush(token: string) {
-  if (!Device.isDevice) return;
+  if (!Notifications || !Device.isDevice) return;
   const current = await Notifications.getPermissionsAsync();
   const permission = current.granted
     ? current
@@ -50,6 +61,7 @@ export function pathFromPush(data: Record<string, unknown> | undefined) {
 }
 
 export function attachPushRouting(open: (path: string) => void) {
+  if (!Notifications) return () => undefined;
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data as Record<string, unknown> | undefined;
     const path = pathFromPush(data);
@@ -67,6 +79,7 @@ export function attachPushRouting(open: (path: string) => void) {
 }
 
 export async function setAppBadge(count: number) {
+  if (!Notifications) return;
   try {
     await Notifications.setBadgeCountAsync(Math.max(0, count));
   } catch {

@@ -1,10 +1,12 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
+import * as Linking from "expo-linking";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { HankenGrotesk_400Regular } from "@expo-google-fonts/hanken-grotesk";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope";
 import { loadAccount } from "@/lib/community";
+import { finishAuthRedirect, isAuthReturn } from "@/lib/finishAuth";
 import { attachPushRouting, registerPush } from "@/lib/notify";
 import { pathForPlace } from "@/lib/place";
 import { SessionProvider, useSession } from "@/lib/session";
@@ -17,8 +19,18 @@ function Gate({ children }: { children: ReactNode }) {
   const openedFor = useRef<string | null>(null);
 
   useEffect(() => {
+    function accept(url: string | null) {
+      if (!url || !isAuthReturn(url)) return;
+      finishAuthRedirect(url).catch(() => undefined);
+    }
+    Linking.getInitialURL().then(accept);
+    const sub = Linking.addEventListener("url", ({ url }) => accept(url));
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
     if (!ready) return;
-    const onSignIn = segments[0] === "sign-in";
+    const onSignIn = segments[0] === "sign-in" || segments[0] === "auth";
     if (!session && !onSignIn) router.replace("/sign-in");
     if (!session) {
       openedFor.current = null;

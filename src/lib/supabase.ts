@@ -1,4 +1,5 @@
 import "react-native-url-polyfill/auto";
+import "@/lib/webcrypto";
 import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
