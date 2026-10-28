@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Linking, Pressable, Share, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Loading, Note, Screen } from "@/components/Screen";
 import { answerArrival, cancelPass, decidePass, loadPass } from "@/lib/community";
+import { passShareMessage, passShareUrl } from "@/lib/site";
 import { colors, fonts, ui } from "@/theme";
 
 const STATUS: Record<string, string> = {
@@ -49,6 +50,32 @@ export default function PassScreen() {
     }
   }
 
+  async function share() {
+    if (!pass) return;
+    const text = passShareMessage({
+      code: String(pass.code),
+      visitorName: String(pass.visitor_name),
+      home: String(pass.flat_number || ""),
+      date: String(pass.visit_on || ""),
+    });
+    await Share.share({ message: text, url: passShareUrl(String(pass.code)) }).catch(() => undefined);
+  }
+
+  async function whatsapp() {
+    if (!pass) return;
+    const text = passShareMessage({
+      code: String(pass.code),
+      visitorName: String(pass.visitor_name),
+      home: String(pass.flat_number || ""),
+      date: String(pass.visit_on || ""),
+    });
+    const phone = String(pass.visitor_phone || "").replace(/\D/g, "");
+    const target = phone
+      ? `https://wa.me/91${phone.slice(-10)}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    await Linking.openURL(target).catch(() => undefined);
+  }
+
   return (
     <Screen title="Visitor pass" onRefresh={load}>
       {!ready ? <Loading /> : null}
@@ -61,6 +88,14 @@ export default function PassScreen() {
           {pass.purpose ? <Text style={ui.body}>{pass.purpose}</Text> : null}
           {pass.visitor_phone ? <Text style={ui.body}>{pass.visitor_phone}</Text> : null}
           {pass.host_answer === "allowed" ? <Text style={ui.body}>You allowed this visitor in.</Text> : null}
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable onPress={share} style={[ui.button, { flex: 1 }]}>
+              <Text style={ui.buttonText}>Share</Text>
+            </Pressable>
+            <Pressable onPress={whatsapp} style={[ui.button, { flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.button }]}>
+              <Text style={[ui.buttonText, { color: colors.button }]}>WhatsApp</Text>
+            </Pressable>
+          </View>
           {pass.status === "waiting" ? (
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Pressable disabled={saving} onPress={() => act(() => answerArrival(Number(pass.id), true))} style={[ui.button, { flex: 1 }]}>

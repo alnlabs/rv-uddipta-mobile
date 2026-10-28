@@ -20,6 +20,13 @@
         {
           "photosPermission": "RV Uddiipta uses your photos when you add a picture to a community post."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "RV Uddiipta uses the camera so security can scan visitor passes at the gate.",
+          "barcodeScannerEnabled": true
+        }
       ]
     ],
     "experiments": {

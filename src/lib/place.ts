@@ -14,6 +14,7 @@ export type Account = {
   flatNumber: string | null
   wing: string | null
   home: string | null
+  needsClaim?: boolean
 };
 
 export function pathForPlace(place: string) {

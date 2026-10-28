@@ -77,6 +77,24 @@ export async function loadAccount(): Promise<Account> {
   const { data: held } = await supabase.from("person_roles").select("role").eq("user_id", user.id);
   const roleNames = [...new Set((held?.length ? held.map((row) => String(row.role)) : [role]))];
   const place = phonePlace(role);
+  let claimNote: string | null = null;
+  if (place === "home" && !flatNumber) {
+    const { data: request } = await supabase
+      .from("registration_requests")
+      .select("status, flat_number")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (request?.status === "pending") {
+      claimNote = `Your claim for ${request.flat_number} is waiting for the office.`;
+    } else if (request?.status === "rejected") {
+      claimNote = `Your claim for ${request.flat_number} was not approved. You can send a new one.`;
+    } else {
+      claimNote = "No home is linked yet. Claim your flat so the office can approve you.";
+    }
+  }
+
   return {
     greeting: greeting(name),
     name,
@@ -87,7 +105,8 @@ export async function loadAccount(): Promise<Account> {
     canSwitch: roleNames.length > 1,
     flatNumber: place === "home" ? flatNumber : null,
     wing: place === "home" ? wing : null,
-    home: place === "home" && !flatNumber ? "No home is linked to this account yet." : null,
+    home: claimNote,
+    needsClaim: place === "home" && !flatNumber,
   };
 }
 
@@ -417,20 +436,44 @@ export async function markNotificationRead(id: number) {
   await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
 }
 
+export async function markAllNotificationsRead() {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Sign in again.");
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .is("read_at", null);
+  dbError(error, "Could not mark notifications as read.");
+}
+
 export function notificationPath(kind: string, href: string) {
   const value = `${kind} ${href}`.toLowerCase();
-  if (value.includes("delivery")) return null;
-  if (value.includes("visitor") || value.includes("pass")) return "/(resident)/history";
-  if (value.includes("notice") || value.includes("announce")) return "/(resident)/notices";
+  const passId = href.match(/pass\/(\d+)/) || href.match(/visitors?\/(\d+)/);
+  if (passId) return `/(resident)/pass/${passId[1]}`;
+  if (value.includes("delivery")) return "/(resident)/notifications";
+  if (value.includes("visitor") || value.includes("pass") || value.includes("history")) {
+    return "/(resident)/history";
+  }
+  if (value.includes("registration") || value.includes("approved")) return "/(resident)/claim";
+  if (value.includes("notice") || value.includes("announce") || value.includes("meeting") || value.includes("maintenance")) {
+    return "/(resident)/notices";
+  }
   const post = href.match(/post\/(\d+)/);
   if (post && (value.includes("post") || value.includes("reply") || value.includes("feed") || value.includes("event") || value.includes("poll"))) {
     return `/(resident)/post/${post[1]}`;
   }
   if (value.includes("event")) return "/(resident)/events";
   if (value.includes("poll")) return "/(resident)/polls";
+  if (value.includes("form")) return "/(resident)/forms";
   if (value.includes("reply") || value.includes("feed")) return "/(resident)/feed";
   if (value.includes("task") || value.includes("work")) return "/(staff)/tasks";
-  return "/(resident)/requests";
+  if (value.includes("committee")) return "/(resident)/committee";
+  if (value.includes("amenit")) return "/(resident)/amenities";
+  if (value.includes("parking") || value.includes("vehicle")) return "/(resident)/parking";
+  if (value.includes("request") || value.includes("note")) return "/(resident)/requests";
+  return "/(resident)/notifications";
 }
 
 export async function answerArrival(passId: number, allow: boolean) {
@@ -490,20 +533,57 @@ export async function setGateStatus(passId: number, status: "waiting" | "inside"
 
 export async function loadGatePasses() {
   const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("visitor_passes")
-    .select("id, code, visitor_name, flat_number, purpose, status, visit_on")
-    .order("created_at", { ascending: false })
-    .limit(80);
-  dbError(error, "Could not load the gate.");
-  const rows = data ?? [];
-  return {
-    pending: rows.filter((row) => row.status === "pending_approval"),
-    expected: rows.filter((row) => row.status === "expected" && row.visit_on === today),
-    inside: rows.filter((row) => row.status === "inside"),
-    left: rows.filter((row) => row.status === "left"),
-    refused: rows.filter((row) => row.status === "refused" || row.status === "cancelled"),
-  };
+  try {
+    const { data, error } = await supabase
+      .from("visitor_passes")
+      .select("id, code, visitor_name, flat_number, purpose, status, visit_on")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    dbError(error, "Could not load the gate.");
+    const rows = data ?? [];
+    const result = {
+      pending: rows.filter((row) => row.status === "pending_approval"),
+      expected: rows.filter((row) => row.status === "expected" && row.visit_on === today),
+      inside: rows.filter((row) => row.status === "inside"),
+      left: rows.filter((row) => row.status === "left"),
+      refused: rows.filter((row) => row.status === "refused" || row.status === "cancelled"),
+      offline: false,
+    };
+    const { default: SecureStore } = await import("expo-secure-store");
+    await SecureStore.setItemAsync(
+      "rv_gate_cache_v1",
+      JSON.stringify({
+        at: Date.now(),
+        expected: result.expected,
+        pending: result.pending,
+        inside: result.inside,
+      }),
+    ).catch(() => undefined);
+    return result;
+  } catch (error) {
+    const { default: SecureStore } = await import("expo-secure-store");
+    const cached = await SecureStore.getItemAsync("rv_gate_cache_v1").catch(() => null);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as {
+          expected?: unknown[]
+          pending?: unknown[]
+          inside?: unknown[]
+        };
+        return {
+          pending: (parsed.pending ?? []) as never[],
+          expected: (parsed.expected ?? []) as never[],
+          inside: (parsed.inside ?? []) as never[],
+          left: [],
+          refused: [],
+          offline: true,
+        };
+      } catch {
+        /* fall through */
+      }
+    }
+    throw error;
+  }
 }
 
 export async function loadTasks() {

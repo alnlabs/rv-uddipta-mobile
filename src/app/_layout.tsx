@@ -5,7 +5,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { HankenGrotesk_400Regular } from "@expo-google-fonts/hanken-grotesk";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope";
 import { loadAccount } from "@/lib/community";
-import { registerPush } from "@/lib/notify";
+import { attachPushRouting, registerPush } from "@/lib/notify";
 import { pathForPlace } from "@/lib/place";
 import { SessionProvider, useSession } from "@/lib/session";
 import { colors } from "@/theme";
@@ -28,9 +28,19 @@ function Gate({ children }: { children: ReactNode }) {
     if (openedFor.current === session.user.id) return;
     openedFor.current = session.user.id;
     loadAccount()
-      .then((account) => router.replace(pathForPlace(account.place)))
+      .then((account) => {
+        if (account.needsClaim) router.replace("/(resident)/claim");
+        else router.replace(pathForPlace(account.place));
+      })
       .catch(() => undefined);
   }, [ready, session, segments, router]);
+
+  useEffect(() => {
+    if (!session) return;
+    return attachPushRouting((path) => {
+      router.push(path as never);
+    });
+  }, [session, router]);
 
   if (!ready) {
     return (

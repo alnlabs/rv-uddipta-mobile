@@ -1,13 +1,14 @@
 import { useCallback, useState } from "react";
 import { Text } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { RoleSwitch } from "@/components/RoleSwitch";
-import { Loading, Note, Screen, SignOut } from "@/components/Screen";
+import { Loading, MenuRow, Note, Screen, SignOut } from "@/components/Screen";
 import { loadAccount, loadHelp } from "@/lib/community";
 import { type Account } from "@/lib/place";
 import { ui } from "@/theme";
 
 export default function SecurityMoreScreen() {
+  const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [contacts, setContacts] = useState("");
   const [message, setMessage] = useState("");
@@ -37,9 +38,11 @@ export default function SecurityMoreScreen() {
           <RoleSwitch roles={account.roles} active={account.role} enabled={account.canSwitch} />
         </>
       ) : null}
+      <Text style={ui.label}>Gate tools</Text>
+      <MenuRow icon="gate" title="Scan pass" detail="Camera needs an installed build" onPress={() => router.push("/(security)/scan")} />
+      <MenuRow icon="people" title="Walk-in visitor" detail="No pass yet" onPress={() => router.push("/(security)/walk-in")} />
       <Text style={ui.label}>Emergency contacts</Text>
       <Text style={ui.body}>{contacts || "The office has not published emergency contacts yet."}</Text>
-      <Text style={ui.body}>Vehicle entry and shift records are kept with the office. They are not on this phone yet.</Text>
       {message ? <Note text={message} /> : null}
       <SignOut />
     </Screen>

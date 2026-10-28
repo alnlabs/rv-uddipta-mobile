@@ -7,7 +7,9 @@ import { type IconName } from "@/components/Icon";
 import { RoleSwitch } from "@/components/RoleSwitch";
 import { Loading, Note, Screen, Tile } from "@/components/Screen";
 import { loadAccount, loadAttention } from "@/lib/community";
+import { loadFeatures, featureOn } from "@/lib/features";
 import { loadMyUpcomingEvents, type FeedPost } from "@/lib/feed";
+import { setAppBadge } from "@/lib/notify";
 import { type Account } from "@/lib/place";
 import { useSession } from "@/lib/session";
 import { colors, ui } from "@/theme";
@@ -20,20 +22,24 @@ export default function HomeScreen() {
   const [home, setHome] = useState<Account | null>(null);
   const [attention, setAttention] = useState<Attention | null>(null);
   const [events, setEvents] = useState<FeedPost[]>([]);
+  const [features, setFeatures] = useState<string[] | null>(null);
   const [message, setMessage] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!session) return;
     try {
-      const [account, today, registered] = await Promise.all([
+      const [account, today, registered, enabled] = await Promise.all([
         loadAccount(),
         loadAttention(),
         loadMyUpcomingEvents().catch(() => [] as FeedPost[]),
+        loadFeatures().catch(() => null),
       ]);
       setHome(account);
       setAttention(today);
       setEvents(registered);
+      setFeatures(enabled);
+      setAppBadge(today.unread.length).catch(() => undefined);
       setMessage("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load your home.");
@@ -46,15 +52,19 @@ export default function HomeScreen() {
   const replies = attention?.waitingRequests ?? [];
   const notices = attention?.notices ?? [];
   const openComplaints = attention?.openRequests ?? [];
-  const canComplain = Boolean(home && home.role !== "visitor");
-  const activityQuiet = openComplaints.length === 0 && events.length === 0;
+  const canComplain = Boolean(home && home.role !== "visitor" && home.flatNumber);
+  const activityQuiet = openComplaints.length === 0 && events.length === 0 && visitors.length === 0 && replies.length === 0;
 
   const actions: { icon: IconName; label: string; href: string }[] = [
     { icon: "schedule", label: "Maintenance", href: "/(resident)/maintenance" },
-    ...(canComplain ? [{ icon: "form" as const, label: "Raise complaint", href: "/(resident)/request/new" }] : []),
+    ...(canComplain && featureOn(features, "requests")
+      ? [{ icon: "form" as const, label: "Raise complaint", href: "/(resident)/request/new" }]
+      : []),
     { icon: "bell", label: "Announcements", href: "/(resident)/notices" },
     { icon: "floors", label: "Community status", href: "/(resident)/status" },
-    { icon: "people", label: "Visitors", href: "/(resident)/history" },
+    ...(featureOn(features, "visitor_passes")
+      ? [{ icon: "people" as const, label: "Visitors", href: "/(resident)/history" }]
+      : []),
     { icon: "feed", label: "Events", href: "/(resident)/events" },
   ];
 
@@ -64,6 +74,11 @@ export default function HomeScreen() {
       <RoleSwitch roles={home?.roles ?? []} active={home?.role ?? ""} enabled={Boolean(home?.canSwitch)} />
       {!home && !message ? <Loading /> : null}
       {home?.home ? <Note text={home.home} /> : null}
+      {home?.needsClaim ? (
+        <Pressable onPress={() => router.push("/(resident)/claim")} style={ui.button}>
+          <Text style={ui.buttonText}>Claim my flat</Text>
+        </Pressable>
+      ) : null}
 
       {visitors.map((pass) => (
         <Pressable key={pass.id} onPress={() => router.push(`/(resident)/pass/${pass.id}`)} style={[ui.card, { borderLeftWidth: 3, borderLeftColor: colors.gold }]}>
@@ -116,7 +131,7 @@ export default function HomeScreen() {
           <HtmlBody html={event.body} lines={2} style={ui.cardTitle} />
         </Pressable>
       ))}
-      {home && activityQuiet ? (
+      {home && activityQuiet && !home.needsClaim ? (
         <Empty title="Nothing in progress" detail="Open complaints and events you have registered for will show up here." />
       ) : null}
 
