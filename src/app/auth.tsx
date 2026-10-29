@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useURL } from "expo-linking";
+import { ApartmentBackdrop } from "@/components/Screen";
 import { finishAuthRedirect } from "@/lib/finishAuth";
-import { colors, ui } from "@/theme";
+import { ui } from "@/theme";
 
 export default function AuthReturn() {
   const url = useURL();
@@ -16,9 +17,13 @@ export default function AuthReturn() {
   }, [url]);
 
   return (
-    <View style={[ui.page, { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }]}>
-      {message ? <Text style={ui.error}>{message}</Text> : <ActivityIndicator color={colors.ink} />}
-      <Text style={ui.body}>{message ? "Sign-in stopped." : "Returning to RV Uddiipta"}</Text>
-    </View>
+    <ApartmentBackdrop>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
+        {message ? <Text style={ui.error}>{message}</Text> : <ActivityIndicator color="#f8fafc" />}
+        <Text style={[ui.body, { color: "#f8fafc", textAlign: "center" }]}>
+          {message ? "Sign-in stopped." : "Returning to RV Uddiipta"}
+        </Text>
+      </View>
+    </ApartmentBackdrop>
   );
 }

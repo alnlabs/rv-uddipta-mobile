@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
@@ -7,9 +7,19 @@ import { supabase } from "@/lib/supabase";
 import { colors, fonts, ui } from "@/theme";
 
 const logo = require("../../assets/icon.png");
+const apartment = require("../../assets/hero-uddiipta.jpg");
 
 export function Mark({ size = 36 }: { size?: number }) {
   return <Image source={logo} style={{ width: size, height: size, borderRadius: size * 0.22 }} />;
+}
+
+export function ApartmentBackdrop({ children }: { children: ReactNode }) {
+  return (
+    <ImageBackground source={apartment} style={{ flex: 1 }} resizeMode="cover">
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(15, 23, 42, 0.5)" }]} />
+      {children}
+    </ImageBackground>
+  );
 }
 
 export function Screen({

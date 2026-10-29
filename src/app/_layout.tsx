@@ -5,6 +5,7 @@ import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { HankenGrotesk_400Regular } from "@expo-google-fonts/hanken-grotesk";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope";
+import { ApartmentBackdrop, Mark } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
 import { finishAuthRedirect, isAuthReturn } from "@/lib/finishAuth";
 import { attachPushRouting, registerPush } from "@/lib/notify";
@@ -56,9 +57,12 @@ function Gate({ children }: { children: ReactNode }) {
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.page }}>
-        <ActivityIndicator color={colors.ink} />
-      </View>
+      <ApartmentBackdrop>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <Mark size={84} />
+          <ActivityIndicator color="#f8fafc" />
+        </View>
+      </ApartmentBackdrop>
     );
   }
 
@@ -73,9 +77,12 @@ export default function RootLayout() {
 
   if (!fontsReady && !fontError) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.page }}>
-        <ActivityIndicator color={colors.ink} />
-      </View>
+      <ApartmentBackdrop>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <Mark size={84} />
+          <ActivityIndicator color="#f8fafc" />
+        </View>
+      </ApartmentBackdrop>
     );
   }
 
