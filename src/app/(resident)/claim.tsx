@@ -8,7 +8,7 @@ import { colors, ui } from "@/theme";
 export default function ClaimScreen() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [kind, setKind] = useState<"owner" | "family">("owner");
+  const [kind, setKind] = useState<"owner" | "family" | "tenant">("owner");
   const [phone, setPhone] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [flatNumber, setFlatNumber] = useState("");
@@ -69,14 +69,14 @@ export default function ClaimScreen() {
         <View style={ui.card}>
           <Text style={ui.label}>I am</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {(["owner", "family"] as const).map((item) => (
+            {(["owner", "family", "tenant"] as const).map((item) => (
               <Pressable
                 key={item}
                 onPress={() => setKind(item)}
                 style={[ui.button, { flex: 1, backgroundColor: kind === item ? colors.button : colors.white, borderWidth: 1, borderColor: colors.button }]}
               >
                 <Text style={[ui.buttonText, { color: kind === item ? colors.onButton : colors.button }]}>
-                  {item === "owner" ? "Owner" : "Family"}
+                  {item === "owner" ? "Owner" : item === "family" ? "Family" : "Tenant"}
                 </Text>
               </Pressable>
             ))}

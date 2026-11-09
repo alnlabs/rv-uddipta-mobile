@@ -58,6 +58,7 @@ export default function ProfileScreen() {
         </>
       ) : null}
       <Text style={ui.body}>Alerts stay in Inbox. Tap a push notification to open the right screen.</Text>
+      {account && !features ? <Note text="Could not check which desks are open." /> : null}
       {featureOn(features, "neighbours") ? (
         <MenuRow icon="people" title="Neighbours" detail="Find a flat or a name" onPress={() => router.push("/(resident)/neighbours")} />
       ) : null}

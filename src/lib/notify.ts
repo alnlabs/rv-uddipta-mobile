@@ -60,19 +60,25 @@ export function pathFromPush(data: Record<string, unknown> | undefined) {
   return path;
 }
 
+const openedPushes = new Set<string>();
+
+function openPush(response: { notification: { request: { identifier: string; content: { data?: Record<string, unknown> } } } }, open: (path: string) => void) {
+  const id = response.notification.request.identifier;
+  if (!id || openedPushes.has(id)) return;
+  const path = pathFromPush(response.notification.request.content.data);
+  if (!path) return;
+  openedPushes.add(id);
+  open(path);
+}
+
 export function attachPushRouting(open: (path: string) => void) {
   if (!Notifications) return () => undefined;
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-    const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-    const path = pathFromPush(data);
-    if (path) open(path);
+    openPush(response, open);
   });
   Notifications.getLastNotificationResponseAsync()
     .then((response) => {
-      if (!response) return;
-      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-      const path = pathFromPush(data);
-      if (path) open(path);
+      if (response) openPush(response, open);
     })
     .catch(() => undefined);
   return () => sub.remove();

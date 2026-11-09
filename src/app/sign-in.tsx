@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import { ApartmentBackdrop, Mark } from "@/components/Screen";
+import { BrandScreen } from "@/components/Screen";
 import { finishAuthRedirect } from "@/lib/finishAuth";
 import { phoneGoogleReady, signInWithPhoneGoogle } from "@/lib/google";
 import { supabase } from "@/lib/supabase";
@@ -51,10 +51,10 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <ApartmentBackdrop>
-      <View style={{ flex: 1, justifyContent: "flex-end", padding: 20, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }}>
+    <View style={{ flex: 1 }}>
+      <BrandScreen />
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 20, paddingBottom: insets.bottom + 24 }}>
         <View style={{ borderRadius: 24, backgroundColor: colors.white, padding: 24, gap: 14 }}>
-          <Mark size={72} />
           <Text style={ui.eyebrow}>RV Uddiipta</Text>
           <Text style={ui.title}>Sign in</Text>
           <Text style={ui.body}>Karmanghat · 238 homes. Use the same Google account as the website.</Text>
@@ -68,6 +68,6 @@ export default function SignInScreen() {
           </Pressable>
         </View>
       </View>
-    </ApartmentBackdrop>
+    </View>
   );
 }

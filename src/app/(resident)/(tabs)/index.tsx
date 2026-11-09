@@ -56,16 +56,24 @@ export default function HomeScreen() {
   const activityQuiet = openComplaints.length === 0 && events.length === 0 && visitors.length === 0 && replies.length === 0;
 
   const actions: { icon: IconName; label: string; href: string }[] = [
-    { icon: "schedule", label: "Maintenance", href: "/(resident)/maintenance" },
+    ...(featureOn(features, "maintenance")
+      ? [{ icon: "schedule" as const, label: "Maintenance", href: "/(resident)/maintenance" }]
+      : []),
     ...(canComplain && featureOn(features, "requests")
       ? [{ icon: "form" as const, label: "Raise complaint", href: "/(resident)/request/new" }]
       : []),
-    { icon: "bell", label: "Announcements", href: "/(resident)/notices" },
-    { icon: "floors", label: "Community status", href: "/(resident)/status" },
+    ...(featureOn(features, "announcements")
+      ? [{ icon: "bell" as const, label: "Announcements", href: "/(resident)/notices" }]
+      : []),
+    ...(featureOn(features, "building")
+      ? [{ icon: "floors" as const, label: "Community status", href: "/(resident)/status" }]
+      : []),
     ...(featureOn(features, "visitor_passes")
       ? [{ icon: "people" as const, label: "Visitors", href: "/(resident)/history" }]
       : []),
-    { icon: "feed", label: "Events", href: "/(resident)/events" },
+    ...(featureOn(features, "events")
+      ? [{ icon: "feed" as const, label: "Events", href: "/(resident)/events" }]
+      : []),
   ];
 
   return (
@@ -77,6 +85,11 @@ export default function HomeScreen() {
       {home?.needsClaim ? (
         <Pressable onPress={() => router.push("/(resident)/claim")} style={ui.button}>
           <Text style={ui.buttonText}>Claim my flat</Text>
+        </Pressable>
+      ) : null}
+      {home?.role === "admin" ? (
+        <Pressable onPress={() => router.push("/(security)/gate")} style={ui.button}>
+          <Text style={ui.buttonText}>Open the gate</Text>
         </Pressable>
       ) : null}
 
@@ -94,8 +107,10 @@ export default function HomeScreen() {
         </Pressable>
       ))}
 
+      {attention?.incomplete ? <Note text="Some updates could not be loaded. Pull to refresh." /> : null}
+      {home && !features ? <Note text="Could not check which desks are open." /> : null}
       <SectionLabel title="Important updates" />
-      {home && notices.length === 0 ? (
+      {home && !attention?.incomplete && notices.length === 0 ? (
         <Empty title="No announcements" detail="Water, power, lift, and association notices appear here when the office publishes them." />
       ) : null}
       {notices.map((notice) => (
@@ -131,7 +146,7 @@ export default function HomeScreen() {
           <HtmlBody html={event.body} lines={2} style={ui.cardTitle} />
         </Pressable>
       ))}
-      {home && activityQuiet && !home.needsClaim ? (
+      {home && !attention?.incomplete && activityQuiet && !home.needsClaim ? (
         <Empty title="Nothing in progress" detail="Open complaints and events you have registered for will show up here." />
       ) : null}
 

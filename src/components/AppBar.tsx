@@ -49,7 +49,7 @@ export function ResidentBar() {
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52 }}>
-        <Mark size={36} />
+        <Mark size={48} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text numberOfLines={1} style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
             RV Uddiipta

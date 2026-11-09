@@ -31,11 +31,11 @@ export default function DeliveriesScreen() {
     setSaving(true);
     setMessage("");
     try {
-      await recordDelivery(home, label);
+      const told = await recordDelivery(home, label);
       setHome("");
       setLabel("");
       await load();
-      setMessage("The resident has been told.");
+      setMessage(told ? "The resident has been told." : "Saved. That home has nobody to tell.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "That delivery was not recorded.");
     } finally {
@@ -54,12 +54,12 @@ export default function DeliveriesScreen() {
           <Text style={ui.buttonText}>{saving ? "Saving…" : "Record delivery"}</Text>
         </Pressable>
       </View>
-      {message ? <Note text={message} tone={message.endsWith("told.") ? "ok" : "error"} /> : null}
+      {message ? <Note text={message} tone={message.startsWith("The resident") ? "ok" : "error"} /> : null}
       {!ready ? <Loading /> : null}
       {ready && rows.length === 0 ? <Text style={ui.body}>No deliveries recorded.</Text> : null}
       {rows.map((row) => (
         <View key={row.id} style={ui.card}>
-          <Text style={ui.label}>{row.status === "collected" ? "Collected" : "Resident told"}</Text>
+          <Text style={ui.label}>{row.status === "collected" ? "Collected" : row.status === "held" ? "Nobody told" : "Resident told"}</Text>
           <Text style={ui.cardTitle}>{row.label}</Text>
           <Text style={ui.body}>{row.flat_number}</Text>
         </View>

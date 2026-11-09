@@ -1,11 +1,11 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ActivityIndicator, Pressable, Text } from "react-native";
 import * as Linking from "expo-linking";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { HankenGrotesk_400Regular } from "@expo-google-fonts/hanken-grotesk";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope";
-import { ApartmentBackdrop, Mark } from "@/components/Screen";
+import { BrandScreen } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
 import { finishAuthRedirect, isAuthReturn } from "@/lib/finishAuth";
 import { attachPushRouting, registerPush } from "@/lib/notify";
@@ -18,6 +18,8 @@ function Gate({ children }: { children: ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
   const openedFor = useRef<string | null>(null);
+  const [startError, setStartError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     function accept(url: string | null) {
@@ -39,14 +41,18 @@ function Gate({ children }: { children: ReactNode }) {
     }
     registerPush(session.access_token).catch(() => undefined);
     if (openedFor.current === session.user.id) return;
-    openedFor.current = session.user.id;
     loadAccount()
       .then((account) => {
+        openedFor.current = session.user.id;
+        setStartError("");
         if (account.needsClaim) router.replace("/(resident)/claim");
         else router.replace(pathForPlace(account.place));
       })
-      .catch(() => undefined);
-  }, [ready, session, segments, router]);
+      .catch((error: unknown) => {
+        openedFor.current = null;
+        setStartError(error instanceof Error ? error.message : "Could not open your account.");
+      });
+  }, [ready, session, segments, router, attempt]);
 
   useEffect(() => {
     if (!session) return;
@@ -55,14 +61,20 @@ function Gate({ children }: { children: ReactNode }) {
     });
   }, [session, router]);
 
-  if (!ready) {
+  if (!ready || startError) {
     return (
-      <ApartmentBackdrop>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <Mark size={84} />
+      <BrandScreen>
+        {startError ? (
+          <>
+            <Text style={{ color: "#f8fafc", textAlign: "center", paddingHorizontal: 24 }}>{startError}</Text>
+            <Pressable onPress={() => { setStartError(""); setAttempt((value) => value + 1); }} style={{ marginTop: 16 }}>
+              <Text style={{ color: "#f8fafc", fontWeight: "600" }}>Try again</Text>
+            </Pressable>
+          </>
+        ) : (
           <ActivityIndicator color="#f8fafc" />
-        </View>
-      </ApartmentBackdrop>
+        )}
+      </BrandScreen>
     );
   }
 
@@ -77,12 +89,9 @@ export default function RootLayout() {
 
   if (!fontsReady && !fontError) {
     return (
-      <ApartmentBackdrop>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <Mark size={84} />
-          <ActivityIndicator color="#f8fafc" />
-        </View>
-      </ApartmentBackdrop>
+      <BrandScreen>
+        <ActivityIndicator color="#f8fafc" />
+      </BrandScreen>
     );
   }
 

@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { ActivityIndicator, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { supabase } from "@/lib/supabase";
@@ -9,8 +9,34 @@ import { colors, fonts, ui } from "@/theme";
 const logo = require("../../assets/icon.png");
 const apartment = require("../../assets/hero-uddiipta.jpg");
 
-export function Mark({ size = 36 }: { size?: number }) {
-  return <Image source={logo} style={{ width: size, height: size, borderRadius: size * 0.22 }} />;
+export const brandBrown = "#854225";
+
+export function Mark({ size = 44 }: { size?: number }) {
+  return (
+    <Image
+      source={logo}
+      accessibilityLabel="RV Uddiipta"
+      style={{ width: size, height: size, borderRadius: size * 0.18 }}
+    />
+  );
+}
+
+export function BrandScreen({ children }: { children?: ReactNode; mark?: number }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: brandBrown }}>
+      <Image
+        source={logo}
+        accessibilityLabel="RV Uddiipta"
+        resizeMode="contain"
+        style={{ width: "100%", height: "100%" }}
+      />
+      {children ? (
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 48, alignItems: "center" }}>
+          {children}
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 export function ApartmentBackdrop({ children }: { children: ReactNode }) {
@@ -72,16 +98,31 @@ export function Screen({
   );
 }
 
+function useGoBack() {
+  const router = useRouter();
+  const segments = useSegments();
+  return () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    const root = segments[0];
+    if (root === "(security)") router.replace("/(security)/gate");
+    else if (root === "(staff)") router.replace("/(staff)");
+    else router.replace("/(resident)");
+  };
+}
+
 export function NavBar({ title, action }: { title: string; action?: ReactNode }) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const goBack = useGoBack();
   return (
     <View style={{ backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.line, paddingTop: insets.top }}>
       <View style={{ minHeight: 52, flexDirection: "row", alignItems: "center", paddingRight: 12, gap: 4 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={goBack}
           hitSlop={6}
           style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
         >
@@ -97,9 +138,9 @@ export function NavBar({ title, action }: { title: string; action?: ReactNode })
 }
 
 export function Back() {
-  const router = useRouter();
+  const goBack = useGoBack();
   return (
-    <Pressable onPress={() => router.back()} hitSlop={8} style={{ minHeight: 44, justifyContent: "center" }}>
+    <Pressable onPress={goBack} hitSlop={8} style={{ minHeight: 44, justifyContent: "center" }}>
       <Text style={ui.quietText}>Back</Text>
     </Pressable>
   );
@@ -108,7 +149,7 @@ export function Back() {
 export function BrandRow() {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <Mark />
+      <Mark size={48} />
       <Text style={ui.eyebrow}>RV Uddiipta</Text>
     </View>
   );

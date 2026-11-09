@@ -55,23 +55,19 @@ export default function ScanScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.page }}>
-      <Screen>
+    <View style={{ flex: 1, backgroundColor: colors.page, paddingTop: 16 }}>
+      <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
         <Back />
         <Text style={ui.eyebrow}>Gate</Text>
         <Text style={ui.title}>Scan pass</Text>
         <Text style={ui.body}>Point at the QR or the pass code. A missing result is not an entry.</Text>
-      </Screen>
+        {message ? <Note text={message} /> : null}
+      </View>
       <CameraView
-        style={{ flex: 1, margin: 20, borderRadius: 16, overflow: "hidden", minHeight: 320 }}
+        style={{ flex: 1, marginHorizontal: 20, marginBottom: 24, borderRadius: 16, overflow: "hidden" }}
         barcodeScannerSettings={{ barcodeTypes: ["qr", "code128", "code39"] }}
         onBarcodeScanned={onScan}
       />
-      {message ? (
-        <View style={{ paddingHorizontal: 20, paddingBottom: 28 }}>
-          <Note text={message} />
-        </View>
-      ) : null}
     </View>
   );
 }

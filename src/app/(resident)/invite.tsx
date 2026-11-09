@@ -4,12 +4,11 @@ import { useRouter } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { createPass, loadPasses } from "@/lib/community";
 import { passShareMessage } from "@/lib/site";
+import { indiaDay } from "@/lib/day";
 import { colors, ui } from "@/theme";
 
 function dayOffset(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return indiaDay(days);
 }
 
 function dayLabel(value: string) {

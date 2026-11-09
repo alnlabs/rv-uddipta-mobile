@@ -1,3 +1,4 @@
+import { indiaDay } from "@/lib/day";
 import { htmlToPlain } from "@/lib/html";
 import { supabase } from "@/lib/supabase";
 import { type Account } from "@/lib/place";
@@ -61,15 +62,18 @@ export async function loadAccount(): Promise<Account> {
   dbError(error, "Could not load your home.");
 
   const role = profile?.role || "visitor";
+  const claimsAFlat = role === "owner" || role === "co_owner" || role === "tenant";
   const name = profile?.display_name || String(user.user_metadata?.full_name || user.email || "");
   let flatNumber: string | null = null;
   let wing: string | null = null;
+  let flatLookupFailed = false;
   if (profile?.flat_id) {
-    const { data: flat } = await supabase
+    const { data: flat, error: flatError } = await supabase
       .from("flats_public")
       .select("flat_number, wing")
       .eq("id", profile.flat_id)
       .maybeSingle();
+    flatLookupFailed = Boolean(flatError);
     flatNumber = flat?.flat_number ? String(flat.flat_number) : null;
     wing = flat?.wing ? String(flat.wing) : null;
   }
@@ -78,7 +82,7 @@ export async function loadAccount(): Promise<Account> {
   const roleNames = [...new Set((held?.length ? held.map((row) => String(row.role)) : [role]))];
   const place = phonePlace(role);
   let claimNote: string | null = null;
-  if (place === "home" && !flatNumber) {
+  if (!flatLookupFailed && place === "home" && !flatNumber && claimsAFlat) {
     const { data: request } = await supabase
       .from("registration_requests")
       .select("status, flat_number")
@@ -106,7 +110,7 @@ export async function loadAccount(): Promise<Account> {
     flatNumber: place === "home" ? flatNumber : null,
     wing: place === "home" ? wing : null,
     home: claimNote,
-    needsClaim: place === "home" && !flatNumber,
+    needsClaim: !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat,
   };
 }
 
@@ -205,7 +209,7 @@ export async function createPass(input: {
   purpose: string
   visitOn: string
 }) {
-  const visit = /^\d{4}-\d{2}-\d{2}$/.test(input.visitOn) ? input.visitOn : new Date().toISOString().slice(0, 10);
+  const visit = /^\d{4}-\d{2}-\d{2}$/.test(input.visitOn) ? input.visitOn : indiaDay();
   const { data, error } = await supabase.rpc("create_my_pass", {
     visitor_name: input.visitorName,
     phone: input.phone,
@@ -234,7 +238,7 @@ export async function loadRequests() {
   const account = await loadAccount();
   const { data: notes, error } = await supabase
     .from("member_notes")
-    .select("id, kind, body, status, category, created_at")
+    .select("id, kind, body, status, category, created_at, image_url")
     .order("created_at", { ascending: false })
     .limit(40);
   dbError(error, "Could not load requests.");
@@ -253,6 +257,7 @@ export async function loadRequests() {
       kind: note.kind === "feedback" ? "Feedback" : "Complaint",
       category: String(note.category || "General"),
       body: String(note.body),
+      photo: note.image_url ? String(note.image_url) : "",
       status: REQUEST_STATUS[String(note.status)] || NOTE_STATUS[String(note.status)] || String(note.status),
       date: when(String(note.created_at)),
       canReply: note.status !== "done",
@@ -302,17 +307,18 @@ export async function replyRequest(noteId: number, body: string) {
 
 export async function loadAttention() {
   const [passes, requests, notices, notifications] = await Promise.all([
-    loadPasses().catch(() => ({ canCreate: false, passes: [] as Awaited<ReturnType<typeof loadPasses>>["passes"] })),
-    loadRequests().catch(() => ({ canSend: false, requests: [] as Awaited<ReturnType<typeof loadRequests>>["requests"] })),
-    loadNotices().catch(() => []),
-    loadNotifications().catch(() => []),
+    loadPasses().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
+    loadRequests().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
+    loadNotices().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
+    loadNotifications().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
   ]);
   return {
-    waitingVisitors: passes.passes.filter((pass) => pass.canDecide || pass.atGate),
-    waitingRequests: requests.requests.filter((item) => item.status === "Awaiting information"),
-    openRequests: requests.requests.filter((item) => item.status !== "Resolved").slice(0, 3),
-    notices: notices.slice(0, 3),
-    unread: notifications.filter((item) => !item.read),
+    incomplete: !passes.ok || !requests.ok || !notices.ok || !notifications.ok,
+    waitingVisitors: passes.ok ? passes.value.passes.filter((pass) => pass.canDecide || pass.atGate) : [],
+    waitingRequests: requests.ok ? requests.value.requests.filter((item) => item.status === "Awaiting information") : [],
+    openRequests: requests.ok ? requests.value.requests.filter((item) => item.status !== "Resolved").slice(0, 3) : [],
+    notices: notices.ok ? notices.value.slice(0, 3) : [],
+    unread: notifications.ok ? notifications.value.filter((item) => !item.read) : [],
   };
 }
 
@@ -532,21 +538,32 @@ export async function setGateStatus(passId: number, status: "waiting" | "inside"
 }
 
 export async function loadGatePasses() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDay();
+  const fields = "id, code, visitor_name, flat_number, purpose, status, visit_on";
   try {
-    const { data, error } = await supabase
-      .from("visitor_passes")
-      .select("id, code, visitor_name, flat_number, purpose, status, visit_on")
-      .order("created_at", { ascending: false })
-      .limit(80);
-    dbError(error, "Could not load the gate.");
-    const rows = data ?? [];
+    const [active, recentLeft] = await Promise.all([
+      supabase
+        .from("visitor_passes")
+        .select(fields)
+        .in("status", ["pending_approval", "waiting", "expected", "inside"])
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("visitor_passes")
+        .select(fields)
+        .eq("status", "left")
+        .order("created_at", { ascending: false })
+        .limit(12),
+    ]);
+    dbError(active.error, "Could not load the gate.");
+    dbError(recentLeft.error, "Could not load the gate.");
+    const rows = active.data ?? [];
     const result = {
       pending: rows.filter((row) => row.status === "pending_approval"),
+      waiting: rows.filter((row) => row.status === "waiting"),
       expected: rows.filter((row) => row.status === "expected" && row.visit_on === today),
       inside: rows.filter((row) => row.status === "inside"),
-      left: rows.filter((row) => row.status === "left"),
-      refused: rows.filter((row) => row.status === "refused" || row.status === "cancelled"),
+      left: recentLeft.data ?? [],
+      refused: [] as typeof rows,
       offline: false,
     };
     const { default: SecureStore } = await import("expo-secure-store");
@@ -556,6 +573,7 @@ export async function loadGatePasses() {
         at: Date.now(),
         expected: result.expected,
         pending: result.pending,
+        waiting: result.waiting,
         inside: result.inside,
       }),
     ).catch(() => undefined);
@@ -568,10 +586,12 @@ export async function loadGatePasses() {
         const parsed = JSON.parse(cached) as {
           expected?: unknown[]
           pending?: unknown[]
+          waiting?: unknown[]
           inside?: unknown[]
         };
         return {
           pending: (parsed.pending ?? []) as never[],
+          waiting: (parsed.waiting ?? []) as never[],
           expected: (parsed.expected ?? []) as never[],
           inside: (parsed.inside ?? []) as never[],
           left: [],
@@ -612,9 +632,13 @@ export async function loadDeliveries() {
 }
 
 export async function recordDelivery(flatNumber: string, label: string) {
-  const { error } = await supabase.rpc("record_delivery", {
+  const { data, error } = await supabase.rpc("record_delivery", {
     home: flatNumber.trim().toUpperCase(),
     label: label.trim(),
   });
   dbError(error, "Could not record the delivery.");
+  if (data && typeof data === "object" && "notified" in data) {
+    return Boolean((data as { notified?: boolean }).notified);
+  }
+  return true;
 }

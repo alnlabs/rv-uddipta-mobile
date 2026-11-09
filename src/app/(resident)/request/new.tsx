@@ -36,7 +36,7 @@ export default function NewRequestScreen() {
 
   return (
     <Screen title="Raise a complaint">
-      <PageTitle kicker="Office" detail="The office sees this on your home. Photos are not stored yet, so write the detail here." />
+      <PageTitle kicker="Office" detail="The office sees this on your home. Attach a photo from the website if you need one. This form stores the written complaint." />
       <Text style={ui.label}>Category</Text>
       <Chips options={categories} value={category} onChange={setCategory} />
       <TextInput

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { MenuRow, Screen } from "@/components/Screen";
+import { MenuRow, Note, Screen } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
 import { loadFeatures, featureOn } from "@/lib/features";
 import { ui } from "@/theme";
@@ -9,6 +9,7 @@ import { ui } from "@/theme";
 export default function ServicesScreen() {
   const router = useRouter();
   const [features, setFeatures] = useState<string[] | null>(null);
+  const [ready, setReady] = useState(false);
   const [showCommittee, setShowCommittee] = useState(false);
 
   useFocusEffect(useCallback(() => {
@@ -19,20 +20,26 @@ export default function ServicesScreen() {
           || account?.role === "admin"
           || Boolean(account?.roles.some((item) => item.role === "committee" || item.role === "admin")),
       );
+      setReady(true);
     });
   }, []));
 
   return (
     <Screen underHeader>
       <Text style={ui.heading}>Services</Text>
+      {ready && !features ? <Note text="Could not check which desks are open." /> : null}
       {featureOn(features, "requests") ? (
         <>
           <MenuRow icon="form" title="Raise a complaint" detail="Water, lift, cleaning, and other issues" onPress={() => router.push("/(resident)/request/new")} />
           <MenuRow icon="mail" title="Complaint history" detail="Status and office replies" onPress={() => router.push("/(resident)/requests")} />
         </>
       ) : null}
-      <MenuRow icon="schedule" title="Maintenance" detail="Official notices. Billing records when the office publishes them." onPress={() => router.push("/(resident)/maintenance")} />
-      <MenuRow icon="floors" title="Community status" detail="Water, electricity, and lift updates" onPress={() => router.push("/(resident)/status")} />
+      {featureOn(features, "maintenance") ? (
+        <MenuRow icon="schedule" title="Maintenance" detail="Official notices. Billing records when the office publishes them." onPress={() => router.push("/(resident)/maintenance")} />
+      ) : null}
+      {featureOn(features, "building") ? (
+        <MenuRow icon="floors" title="Community status" detail="Water, electricity, and lift updates" onPress={() => router.push("/(resident)/status")} />
+      ) : null}
       {featureOn(features, "amenities") ? (
         <MenuRow icon="schedule" title="Amenities" detail="Book a shared space" onPress={() => router.push("/(resident)/amenities")} />
       ) : null}

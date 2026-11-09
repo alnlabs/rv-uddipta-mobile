@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { switchAccountRole } from "@/lib/community";
@@ -16,12 +17,18 @@ export function RoleSwitch({
 }) {
   const { session } = useSession();
   const router = useRouter();
+  const [message, setMessage] = useState("");
   if (!enabled || roles.length < 2) return null;
 
   async function choose(role: string) {
     if (!session || role === active) return;
-    const place = await switchAccountRole(role);
-    router.replace(pathForPlace(place));
+    setMessage("");
+    try {
+      const place = await switchAccountRole(role);
+      router.replace(pathForPlace(place));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not switch.");
+    }
   }
 
   return (
@@ -45,6 +52,7 @@ export function RoleSwitch({
           </Pressable>
         );
       })}
+      {message ? <Text style={{ color: colors.goldInk }}>{message}</Text> : null}
     </View>
   );
 }

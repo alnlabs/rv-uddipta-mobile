@@ -26,6 +26,7 @@ export default function CheckScreen() {
     setReady(false);
     try {
       setResult(await lookupPass(String(code || "")));
+      setMessage("");
       setReady(true);
       return true;
     } catch (error) {
@@ -81,7 +82,11 @@ export default function CheckScreen() {
           <Text style={ui.body}>{result.home} · {result.date}</Text>
           <Text style={ui.body}>{result.purpose}</Text>
           {result.answer === "allowed" ? <Text style={ui.body}>The resident allowed this visitor in.</Text> : null}
-          {!ok && result.status !== "left" ? <Text style={ui.body}>Do not let this visitor in.</Text> : null}
+          {!ok && result.status === "waiting" && result.answer !== "allowed" ? (
+            <Text style={ui.body}>Wait for the resident to allow this visitor.</Text>
+          ) : !ok && result.status !== "left" ? (
+            <Text style={ui.body}>Do not let this visitor in.</Text>
+          ) : null}
           {ok && result.status === "expected" ? (
             <Pressable disabled={saving} onPress={() => record("waiting")} style={ui.button}>
               <Text style={ui.buttonText}>{saving ? "Saving…" : "Visitor arrived"}</Text>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Text } from "react-native";
 import { useURL } from "expo-linking";
-import { ApartmentBackdrop } from "@/components/Screen";
+import { BrandScreen } from "@/components/Screen";
 import { finishAuthRedirect } from "@/lib/finishAuth";
 import { ui } from "@/theme";
 
@@ -17,13 +17,11 @@ export default function AuthReturn() {
   }, [url]);
 
   return (
-    <ApartmentBackdrop>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
-        {message ? <Text style={ui.error}>{message}</Text> : <ActivityIndicator color="#f8fafc" />}
-        <Text style={[ui.body, { color: "#f8fafc", textAlign: "center" }]}>
-          {message ? "Sign-in stopped." : "Returning to RV Uddiipta"}
-        </Text>
-      </View>
-    </ApartmentBackdrop>
+    <BrandScreen>
+      {message ? <Text style={ui.error}>{message}</Text> : <ActivityIndicator color="#f8fafc" />}
+      <Text style={[ui.body, { color: "#f8fafc", textAlign: "center", paddingHorizontal: 24 }]}>
+        {message ? "Sign-in stopped." : "Returning to RV Uddiipta"}
+      </Text>
+    </BrandScreen>
   );
 }

@@ -10,6 +10,7 @@ export default function GateScreen() {
   const [code, setCode] = useState("");
   const [expected, setExpected] = useState<Awaited<ReturnType<typeof loadGatePasses>>["expected"]>([]);
   const [pending, setPending] = useState<Awaited<ReturnType<typeof loadGatePasses>>["pending"]>([]);
+  const [waiting, setWaiting] = useState<Awaited<ReturnType<typeof loadGatePasses>>["waiting"]>([]);
   const [inside, setInside] = useState<Awaited<ReturnType<typeof loadGatePasses>>["inside"]>([]);
   const [offline, setOffline] = useState(false);
   const [help, setHelp] = useState("");
@@ -21,6 +22,7 @@ export default function GateScreen() {
       const [passes, notes] = await Promise.all([loadGatePasses(), loadHelp()]);
       setExpected(passes.expected);
       setPending(passes.pending);
+      setWaiting(passes.waiting);
       setInside(passes.inside);
       setOffline(Boolean(passes.offline));
       setHelp(notes.rules || notes.contacts);
@@ -43,7 +45,7 @@ export default function GateScreen() {
     router.push(`/(security)/check?code=${encodeURIComponent(next)}`);
   }
 
-  const quiet = ready && pending.length === 0 && expected.length === 0 && inside.length === 0;
+  const quiet = ready && pending.length === 0 && waiting.length === 0 && expected.length === 0 && inside.length === 0;
 
   return (
     <Screen hero onRefresh={load}>
@@ -73,6 +75,13 @@ export default function GateScreen() {
       {quiet ? <Text style={ui.body}>No expected visitors right now. Use Scan or Walk-in when someone arrives.</Text> : null}
       {pending.length > 0 ? <Text style={ui.label}>Waiting for the resident</Text> : null}
       {pending.map((pass) => (
+        <Pressable key={pass.id} onPress={() => check(String(pass.code))} style={ui.card}>
+          <Text style={ui.cardTitle}>{pass.visitor_name}</Text>
+          <Text style={ui.body}>{pass.flat_number} · {pass.code}</Text>
+        </Pressable>
+      ))}
+      {waiting.length > 0 ? <Text style={ui.label}>At the gate</Text> : null}
+      {waiting.map((pass) => (
         <Pressable key={pass.id} onPress={() => check(String(pass.code))} style={ui.card}>
           <Text style={ui.cardTitle}>{pass.visitor_name}</Text>
           <Text style={ui.body}>{pass.flat_number} · {pass.code}</Text>

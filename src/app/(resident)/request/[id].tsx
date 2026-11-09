@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Image, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Loading, Note, Screen } from "@/components/Screen";
 import { loadRequests, replyRequest } from "@/lib/community";
@@ -49,6 +49,9 @@ export default function RequestScreen() {
       {item ? (
         <>
           <Text style={ui.label}>{item.status} · {item.date}</Text>
+          {item.photo ? (
+            <Image source={{ uri: item.photo }} accessibilityLabel="Complaint photo" style={{ width: "100%", height: 220, borderRadius: 16 }} />
+          ) : null}
           <Text style={ui.body}>{item.body}</Text>
           {item.messages.map((line) => (
             <View key={line.id} style={ui.card}>

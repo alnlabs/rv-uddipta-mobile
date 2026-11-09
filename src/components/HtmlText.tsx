@@ -24,14 +24,15 @@ function colorOf(attrs: Record<string, string>) {
 }
 
 function inlineStyle(node: Extract<HtmlNode, { kind: "el" }>, base: TextStyle): TextStyle {
-  const next: TextStyle = { ...base };
-  if (node.tag === "strong" || node.tag === "b") next.fontFamily = fonts.display;
-  if (node.tag === "em" || node.tag === "i") next.fontStyle = "italic";
-  if (node.tag === "u") next.textDecorationLine = "underline";
-  if (node.tag === "s" || node.tag === "strike") next.textDecorationLine = "line-through";
   const color = colorOf(node.attrs);
-  if (color) next.color = color;
-  return next;
+  return {
+    ...base,
+    ...(node.tag === "strong" || node.tag === "b" ? { fontFamily: fonts.display } : null),
+    ...(node.tag === "em" || node.tag === "i" ? { fontStyle: "italic" as const } : null),
+    ...(node.tag === "u" ? { textDecorationLine: "underline" as const } : null),
+    ...(node.tag === "s" || node.tag === "strike" ? { textDecorationLine: "line-through" as const } : null),
+    ...(color ? { color } : null),
+  };
 }
 
 function renderInline(nodes: HtmlNode[], base: TextStyle) {

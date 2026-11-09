@@ -11,7 +11,7 @@ export default function NeighboursScreen() {
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
 
-  const load = useCallback(async (q = query) => {
+  const load = useCallback(async (q: string) => {
     try {
       const data = await loadNeighbours(q);
       setHomes(data.homes);
@@ -21,7 +21,7 @@ export default function NeighboursScreen() {
     } finally {
       setReady(true);
     }
-  }, [query]);
+  }, []);
 
   useFocusEffect(useCallback(() => { load(""); }, [load]));
 

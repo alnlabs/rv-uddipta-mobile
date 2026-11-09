@@ -3,12 +3,11 @@ import { Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Back, Loading, Note, Screen } from "@/components/Screen";
 import { bookAmenity, loadAmenities } from "@/lib/office";
+import { indiaDay } from "@/lib/day";
 import { colors, ui } from "@/theme";
 
 function dayOffset(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return indiaDay(days);
 }
 
 function dayLabel(value: string) {

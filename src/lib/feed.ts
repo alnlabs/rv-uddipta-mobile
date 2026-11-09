@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import { indiaDay } from "@/lib/day";
 import { supabase } from "@/lib/supabase";
 
 export type Access = "none" | "view" | "manage";
@@ -130,10 +131,7 @@ function text(value: unknown) {
 }
 
 function todayKey() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
+  return indiaDay();
 }
 
 export function dateLabel(value: string | null) {

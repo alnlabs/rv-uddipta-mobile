@@ -16,7 +16,8 @@ export function Workspace({ place, children }: { place: string; children: ReactN
     try {
       const account = await loadAccount();
       setHome(pathForPlace(account.place));
-      setAllowed(account.place === place);
+      const gateKeeper = account.role === "admin" || account.role === "security";
+      setAllowed(account.place === place || (place === "gate" && gateKeeper));
       setMessage("");
     } catch (error) {
       setAllowed(false);

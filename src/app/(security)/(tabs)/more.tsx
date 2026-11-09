@@ -27,7 +27,7 @@ export default function SecurityMoreScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <Text style={ui.eyebrow}>Account</Text>
       <Text style={ui.title}>More</Text>
       {!account && !message ? <Loading /> : null}

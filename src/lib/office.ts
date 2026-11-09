@@ -23,7 +23,7 @@ export async function loadRegistration() {
 }
 
 export async function submitRegistration(input: {
-  kind: "owner" | "family"
+  kind: "owner" | "family" | "tenant"
   phone: string
   ownerName: string
   flatNumber: string

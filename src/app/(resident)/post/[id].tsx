@@ -83,7 +83,8 @@ export default function PostScreen() {
         onPress: () => {
           run(async () => {
             await removePost(id);
-            router.back();
+            if (router.canGoBack()) router.back();
+            else router.replace("/(resident)/feed");
           }).catch(() => undefined);
         },
       },
