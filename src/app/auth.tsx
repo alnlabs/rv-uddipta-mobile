@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text } from "react-native";
+import { Pressable, Text } from "react-native";
 import { useURL } from "expo-linking";
 import { BrandScreen } from "@/components/Screen";
 import { finishAuthRedirect } from "@/lib/finishAuth";
-import { ui } from "@/theme";
 
 export default function AuthReturn() {
   const url = useURL();
@@ -16,12 +15,16 @@ export default function AuthReturn() {
     });
   }, [url]);
 
-  return (
-    <BrandScreen>
-      {message ? <Text style={ui.error}>{message}</Text> : <ActivityIndicator color="#f8fafc" />}
-      <Text style={[ui.body, { color: "#f8fafc", textAlign: "center", paddingHorizontal: 24 }]}>
-        {message ? "Sign-in stopped." : "Returning to RV Uddiipta"}
-      </Text>
-    </BrandScreen>
-  );
+  if (message) {
+    return (
+      <BrandScreen>
+        <Text style={{ color: "#f8fafc", textAlign: "center", paddingHorizontal: 24 }}>{message}</Text>
+        <Pressable onPress={() => setMessage("")} style={{ marginTop: 16 }}>
+          <Text style={{ color: "#f8fafc", fontWeight: "600" }}>Try again</Text>
+        </Pressable>
+      </BrandScreen>
+    );
+  }
+
+  return <BrandScreen busy status="Finishing sign-in…" />;
 }

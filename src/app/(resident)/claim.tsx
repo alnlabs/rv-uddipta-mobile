@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadRegistration, submitRegistration } from "@/lib/office";
 import { colors, ui } from "@/theme";
 
@@ -50,12 +50,8 @@ export default function ClaimScreen() {
   const linked = Boolean(status?.flatNumber);
 
   return (
-    <Screen onRefresh={load}>
-      <Back />
-      <Text style={ui.eyebrow}>Your home</Text>
-      <Text style={ui.title}>Claim flat</Text>
+    <Screen title="Claim flat" onRefresh={load} busy={!ready && !message}>
       <Text style={ui.body}>Tell the office which brochure flat is yours. Guests do not need this — only people who live here.</Text>
-      {!ready ? <Loading /> : null}
       {linked ? (
         <Note text={`Your home is ${status?.flatNumber}. You are ready to use the app.`} tone="ok" />
       ) : null}

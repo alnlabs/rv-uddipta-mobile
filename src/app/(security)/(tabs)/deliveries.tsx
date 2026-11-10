@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { useFocusEffect } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Note, Screen } from "@/components/Screen";
 import { loadDeliveries, recordDelivery } from "@/lib/community";
 import { colors, ui } from "@/theme";
 
 export default function DeliveriesScreen() {
+  const router = useRouter();
   const [home, setHome] = useState("");
   const [label, setLabel] = useState("");
   const [rows, setRows] = useState<Awaited<ReturnType<typeof loadDeliveries>>>([]);
@@ -44,19 +45,34 @@ export default function DeliveriesScreen() {
   }
 
   return (
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} busy={!ready && !message}>
       <Text style={ui.eyebrow}>Gate</Text>
       <Text style={ui.title}>Deliveries</Text>
+      <Text style={ui.body}>Use the phone for delivery people at the gate. Leave parcels here only when nobody is going up.</Text>
+
+      <Text style={ui.label}>Delivery person</Text>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Pressable onPress={() => router.push("/(security)/scan")} style={[ui.button, { flex: 1 }]}>
+          <Text style={ui.buttonText}>Scan QR</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/(security)/walk-in?purpose=Delivery")}
+          style={[ui.button, { flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.button }]}
+        >
+          <Text style={[ui.buttonText, { color: colors.button }]}>No pass</Text>
+        </Pressable>
+      </View>
+
+      <Text style={ui.label}>Parcel left at gate</Text>
       <View style={ui.card}>
         <TextInput value={home} onChangeText={setHome} autoCapitalize="characters" placeholder="Home, A-101" placeholderTextColor={colors.placeholder} style={ui.field} />
         <TextInput value={label} onChangeText={setLabel} placeholder="What arrived" placeholderTextColor={colors.placeholder} style={ui.field} />
         <Pressable onPress={save} disabled={saving} style={ui.button}>
-          <Text style={ui.buttonText}>{saving ? "Saving…" : "Record delivery"}</Text>
+          <Text style={ui.buttonText}>{saving ? "Saving…" : "Record parcel"}</Text>
         </Pressable>
       </View>
       {message ? <Note text={message} tone={message.startsWith("The resident") ? "ok" : "error"} /> : null}
-      {!ready ? <Loading /> : null}
-      {ready && rows.length === 0 ? <Text style={ui.body}>No deliveries recorded.</Text> : null}
+      {ready && rows.length === 0 ? <Text style={ui.body}>No parcels recorded.</Text> : null}
       {rows.map((row) => (
         <View key={row.id} style={ui.card}>
           <Text style={ui.label}>{row.status === "collected" ? "Collected" : row.status === "held" ? "Nobody told" : "Resident told"}</Text>

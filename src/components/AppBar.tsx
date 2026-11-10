@@ -61,7 +61,6 @@ export function ResidentBar() {
           ) : null}
         </View>
         <IconButton icon="bell" label="Notifications" badge={unread} onPress={() => router.push("/(resident)/notifications")} />
-        <IconButton icon="user" label="Profile" onPress={() => router.navigate("/(resident)/profile")} />
       </View>
     </View>
   );

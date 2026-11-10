@@ -1,18 +1,16 @@
 import * as SecureStore from "expo-secure-store";
-import { memberFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
 const CACHE_KEY = "rv_features_v1";
 
 export async function loadFeatures(): Promise<string[] | null> {
   try {
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token;
-    if (!token) return null;
-    const data = await memberFetch<{ features: string[] }>("/features", token);
-    if (!Array.isArray(data.features)) return null;
-    await SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(data.features)).catch(() => undefined);
-    return data.features.map(String);
+    const { data, error } = await supabase.rpc("list_my_features");
+    if (error) throw error;
+    if (!Array.isArray(data)) return null;
+    const features = data.map(String);
+    await SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(features)).catch(() => undefined);
+    return features;
   } catch {
     const cached = await SecureStore.getItemAsync(CACHE_KEY).catch(() => null);
     if (cached) {

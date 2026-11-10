@@ -16,6 +16,10 @@ if (scheme) {
   plugins.push(["@react-native-google-signin/google-signin", { iosUrlScheme: scheme }]);
 }
 
+if (!plugins.includes("./plugins/withAndroidReleaseSigning")) {
+  plugins.push("./plugins/withAndroidReleaseSigning");
+}
+
 module.exports = {
   expo: {
     ...app.expo,

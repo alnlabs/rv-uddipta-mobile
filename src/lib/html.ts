@@ -21,6 +21,19 @@ function decode(value: string) {
     .replace(/&#x([0-9a-f]+);/gi, (_, code: string) => char(parseInt(code, 16)));
 }
 
+/** Office Quill HTML is sometimes stored entity-escaped (`&lt;p&gt;`). Decode until real tags appear. */
+export function normalizeHtml(value: string) {
+  let html = String(value ?? "");
+  for (let pass = 0; pass < 3; pass += 1) {
+    if (/<\/?[a-z][^>]*>/i.test(html)) return html;
+    if (!/&(?:lt|gt|amp|quot|#)/i.test(html)) return html;
+    const next = decode(html);
+    if (next === html) return html;
+    html = next;
+  }
+  return html;
+}
+
 function char(code: number) {
   if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return "";
   if (code < 32 && code !== 10) return "";
@@ -38,23 +51,22 @@ function readAttrs(raw: string) {
 }
 
 export function looksRich(value: string) {
-  return /<\/?[a-z][^>]*>/i.test(value);
+  return /<\/?[a-z][^>]*>/i.test(normalizeHtml(value));
 }
 
 export function htmlToPlain(value: string) {
-  return decode(
-    value
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/(p|div|h[1-6]|li|blockquote|pre|tr)>/gi, "\n")
-      .replace(/<[^>]+>/g, " "),
-  )
+  return normalizeHtml(value)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|blockquote|pre|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-export function parseHtml(html: string): HtmlNode[] {
+export function parseHtml(input: string): HtmlNode[] {
+  const html = normalizeHtml(input);
   const root: HtmlNode = { kind: "el", tag: "div", attrs: {}, children: [] };
   const stack: Extract<HtmlNode, { kind: "el" }>[] = [root];
   let skip = 0;

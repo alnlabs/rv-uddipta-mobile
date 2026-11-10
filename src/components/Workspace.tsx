@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Pressable, Text } from "react-native";
 import { useRouter } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { Note, PageBusy, Screen } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
-import { pathForPlace } from "@/lib/place";
+import { canAccessPlace, pathForPlace } from "@/lib/place";
 import { ui } from "@/theme";
 
 export function Workspace({ place, children }: { place: string; children: ReactNode }) {
@@ -15,9 +15,14 @@ export function Workspace({ place, children }: { place: string; children: ReactN
   const load = useCallback(async () => {
     try {
       const account = await loadAccount();
+      if (account.superAdmin) {
+        setHome("/(super)");
+        setAllowed(false);
+        setMessage("Super admin uses the super admin screens.");
+        return;
+      }
       setHome(pathForPlace(account.place));
-      const gateKeeper = account.role === "admin" || account.role === "security";
-      setAllowed(account.place === place || (place === "gate" && gateKeeper));
+      setAllowed(canAccessPlace(account, place));
       setMessage("");
     } catch (error) {
       setAllowed(false);
@@ -27,13 +32,7 @@ export function Workspace({ place, children }: { place: string; children: ReactN
 
   useEffect(() => { load(); }, [load]);
 
-  if (allowed === null) {
-    return (
-      <Screen>
-        <Loading />
-      </Screen>
-    );
-  }
+  if (allowed === null) return <PageBusy />;
 
   if (!allowed) {
     return (

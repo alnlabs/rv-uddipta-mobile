@@ -1,12 +1,22 @@
-import { type ReactNode } from "react";
-import { ActivityIndicator, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ActivityIndicator, Animated, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter, useSegments } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, ui } from "@/theme";
 
-const logo = require("../../assets/icon.png");
+export type AppBarSearch = {
+  open: boolean
+  value: string
+  placeholder?: string
+  onOpen: () => void
+  onClose: () => void
+  onChange: (value: string) => void
+  onSubmit: () => void
+};
+
+const logo = require("../../assets/icon-full.png");
 const apartment = require("../../assets/hero-uddiipta.jpg");
 
 export const brandBrown = "#854225";
@@ -21,17 +31,48 @@ export function Mark({ size = 44 }: { size?: number }) {
   );
 }
 
-export function BrandScreen({ children }: { children?: ReactNode; mark?: number }) {
+export function BrandScreen({
+  children,
+  busy = false,
+  status,
+}: {
+  children?: ReactNode
+  /** Show spinner + status after a short wait so fast launches stay clean. */
+  busy?: boolean
+  status?: string
+  mark?: number
+}) {
+  const [showBusy, setShowBusy] = useState(false);
+
+  useEffect(() => {
+    if (!busy) {
+      setShowBusy(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowBusy(true), 450);
+    return () => clearTimeout(timer);
+  }, [busy]);
+
+  const footer = children || showBusy;
+
   return (
-    <View style={{ flex: 1, backgroundColor: brandBrown }}>
+    <View style={{ flex: 1, backgroundColor: brandBrown, alignItems: "center", justifyContent: "center" }}>
       <Image
         source={logo}
         accessibilityLabel="RV Uddiipta"
         resizeMode="contain"
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "72%", maxWidth: 320, aspectRatio: 1 }}
       />
-      {children ? (
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: 48, alignItems: "center" }}>
+      {footer ? (
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 48, alignItems: "center", gap: 12, paddingHorizontal: 28 }}>
+          {showBusy ? (
+            <>
+              <ActivityIndicator color="#f8fafc" size="small" />
+              <Text style={{ color: "#f8fafc", textAlign: "center", fontSize: 15, lineHeight: 20, opacity: 0.92 }}>
+                {status || "Loading…"}
+              </Text>
+            </>
+          ) : null}
           {children}
         </View>
       ) : null}
@@ -48,6 +89,25 @@ export function ApartmentBackdrop({ children }: { children: ReactNode }) {
   );
 }
 
+/** Spinner over static UI — use after launch so the screen is already visible. */
+export function LoadingOverlay({ light = false }: { light?: boolean } = {}) {
+  return (
+    <View
+      pointerEvents="auto"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: light ? "rgba(248,250,252,0.55)" : "rgba(248,250,252,0.72)",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      ]}
+    >
+      <ActivityIndicator color={colors.button} />
+    </View>
+  );
+}
+
 export function Screen({
   children,
   refreshing,
@@ -56,6 +116,10 @@ export function Screen({
   underHeader = false,
   title,
   action,
+  showBack = true,
+  search,
+  padBottom = 0,
+  busy = false,
 }: {
   children: ReactNode
   refreshing?: boolean
@@ -64,36 +128,45 @@ export function Screen({
   underHeader?: boolean
   title?: string
   action?: ReactNode
+  showBack?: boolean
+  search?: AppBarSearch
+  /** Extra scroll padding (e.g. clear a FAB). */
+  padBottom?: number
+  /** Keep chrome + static content visible; spinner sits on top. */
+  busy?: boolean
 }) {
   const insets = useSafeAreaInsets();
   const paddingTop = title || underHeader ? 16 : hero ? 0 : insets.top + 16;
   return (
     <View style={ui.page}>
-    {title ? <NavBar title={title} action={action} /> : null}
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={[
-        ui.content,
-        {
-          paddingTop,
-          paddingBottom: insets.bottom + 28,
-        },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={Boolean(refreshing)}
-            onRefresh={() => {
-              onRefresh().catch(() => undefined);
-            }}
-            tintColor={colors.button}
-          />
-        ) : undefined
-      }
-    >
-      {children}
-    </ScrollView>
+    {title ? <NavBar title={title} action={action} showBack={showBack} search={search} /> : null}
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          ui.content,
+          {
+            paddingTop,
+            paddingBottom: insets.bottom + 28 + padBottom,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={Boolean(refreshing)}
+              onRefresh={() => {
+                onRefresh().catch(() => undefined);
+              }}
+              tintColor={colors.button}
+            />
+          ) : undefined
+        }
+      >
+        {children}
+      </ScrollView>
+      {busy ? <LoadingOverlay /> : null}
+    </View>
     </View>
   );
 }
@@ -109,29 +182,76 @@ function useGoBack() {
     const root = segments[0];
     if (root === "(security)") router.replace("/(security)/gate");
     else if (root === "(staff)") router.replace("/(staff)");
+    else if (root === "(super)") router.replace("/(super)");
     else router.replace("/(resident)");
   };
 }
 
-export function NavBar({ title, action }: { title: string; action?: ReactNode }) {
+export function NavBar({
+  title,
+  action,
+  showBack = true,
+  search,
+}: {
+  title: string
+  action?: ReactNode
+  showBack?: boolean
+  search?: AppBarSearch
+}) {
   const insets = useSafeAreaInsets();
   const goBack = useGoBack();
+  const searching = Boolean(search?.open);
+
   return (
     <View style={{ backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.line, paddingTop: insets.top }}>
-      <View style={{ minHeight: 52, flexDirection: "row", alignItems: "center", paddingRight: 12, gap: 4 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={goBack}
-          hitSlop={6}
-          style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
-        >
-          <Icon name="back" color={colors.ink} size={22} />
-        </Pressable>
-        <Text numberOfLines={1} style={{ flex: 1, color: colors.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
-          {title}
-        </Text>
-        {action}
+      <View style={{ minHeight: 52, flexDirection: "row", alignItems: "center", paddingLeft: showBack && !searching ? 0 : 16, paddingRight: 12, gap: 4 }}>
+        {showBack && !searching ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            onPress={goBack}
+            hitSlop={6}
+            style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+          >
+            <Icon name="back" color={colors.ink} size={22} />
+          </Pressable>
+        ) : null}
+        {searching && search ? (
+          <TextInput
+            value={search.value}
+            onChangeText={search.onChange}
+            onSubmitEditing={search.onSubmit}
+            placeholder={search.placeholder || "Search"}
+            placeholderTextColor={colors.placeholder}
+            autoFocus
+            returnKeyType="search"
+            style={{
+              flex: 1,
+              minHeight: 40,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+              backgroundColor: "rgba(15, 23, 42, 0.05)",
+              color: colors.ink,
+              fontFamily: fonts.body,
+              fontSize: 16,
+            }}
+          />
+        ) : (
+          <Text numberOfLines={1} style={{ flex: 1, color: colors.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
+            {title}
+          </Text>
+        )}
+        {search ? (
+          <IconButton
+            icon={searching ? "close" : "search"}
+            label={searching ? "Close search" : "Search"}
+            onPress={() => {
+              if (searching) search.onClose();
+              else search.onOpen();
+            }}
+          />
+        ) : null}
+        {!searching ? action : null}
       </View>
     </View>
   );
@@ -265,7 +385,12 @@ export function Tile({ icon, label, onPress }: { icon: IconName; label: string; 
       <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.brandSoft, alignItems: "center", justifyContent: "center" }}>
         <Icon name={icon} color={colors.button} size={20} />
       </View>
-      <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{label}</Text>
+      <Text
+        numberOfLines={2}
+        style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600", textAlign: "center" }}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -278,11 +403,73 @@ export function SignOut() {
   );
 }
 
-export function Loading() {
+function SkeletonBlock({
+  height,
+  width = "100%",
+  radius = 10,
+  style,
+}: {
+  height: number
+  width?: number | `${number}%`
+  radius?: number
+  style?: object
+}) {
   return (
-    <View style={{ paddingVertical: 48, alignItems: "center" }}>
-      <ActivityIndicator color={colors.button} />
+    <View
+      style={[
+        {
+          height,
+          width,
+          borderRadius: radius,
+          backgroundColor: "rgba(15, 23, 42, 0.08)",
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+/** Full-page shell with spinner on top (for route gates). Prefer Screen busy= for normal screens. */
+export function PageBusy() {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.page }}>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 72, gap: 14 }}>
+        <View style={{ height: 28, width: "42%", borderRadius: 8, backgroundColor: "rgba(15,23,42,0.08)" }} />
+        <View style={[ui.card, { height: 88 }]} />
+        <View style={[ui.card, { height: 88 }]} />
+        <View style={[ui.card, { height: 120 }]} />
+      </View>
+      <LoadingOverlay />
     </View>
+  );
+}
+
+/** Soft card placeholders for the first paint of a screen. */
+export function Loading({ cards = 3 }: { cards?: number } = {}) {
+  const pulse = useRef(new Animated.Value(0.45)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <Animated.View style={{ gap: 12, opacity: pulse }}>
+      {Array.from({ length: cards }, (_, index) => (
+        <View key={index} style={[ui.card, { gap: 12, padding: 16 }]}>
+          <SkeletonBlock height={12} width="34%" />
+          <SkeletonBlock height={18} width="72%" />
+          <SkeletonBlock height={14} width="88%" />
+          <SkeletonBlock height={14} width="56%" />
+        </View>
+      ))}
+    </Animated.View>
   );
 }
 
@@ -308,9 +495,9 @@ export function MenuRow({
           <Icon name={icon} color={colors.button} size={20} />
         </View>
       ) : null}
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={ui.cardTitle}>{title}</Text>
-        {detail ? <Text style={ui.body}>{detail}</Text> : null}
+      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+        <Text style={ui.cardTitle} numberOfLines={1}>{title}</Text>
+        {detail ? <Text style={ui.body} numberOfLines={2}>{detail}</Text> : null}
       </View>
     </Pressable>
   );

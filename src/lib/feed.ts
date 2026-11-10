@@ -71,6 +71,15 @@ export type FormField = {
   choices: string[]
 };
 
+export type FormCommunityAnswer = {
+  responseId: number
+  flatNumber: string
+  name: string
+  phone: string
+  updatedAt: string
+  values: Record<string, string>
+};
+
 export type CommunityForm = {
   id: number
   title: string
@@ -82,6 +91,7 @@ export type CommunityForm = {
   phone: string
   fields: FormField[]
   answers: { fieldId: number; value: string }[]
+  community: FormCommunityAnswer[]
 };
 
 const TYPES = [
@@ -398,37 +408,95 @@ function mapField(raw: Record<string, unknown>): FormField {
   };
 }
 
+function mapCommunity(raw: unknown): FormCommunityAnswer[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    const row = item as Record<string, unknown>;
+    const valuesRaw = (row.values ?? {}) as Record<string, unknown>;
+    const values: Record<string, string> = {};
+    for (const [key, value] of Object.entries(valuesRaw)) values[String(key)] = text(value);
+    return {
+      responseId: Number(row.responseId || 0),
+      flatNumber: text(row.flatNumber),
+      name: text(row.name),
+      phone: text(row.phone),
+      updatedAt: text(row.updatedAt),
+      values,
+    };
+  });
+}
+
+function mapForm(item: Record<string, unknown>): CommunityForm {
+  return {
+    id: Number(item.id),
+    title: text(item.title),
+    note: text(item.note),
+    closed: Boolean(item.closed),
+    results: text(item.results),
+    homes: item.homes == null ? null : Number(item.homes),
+    submitted: Boolean(item.submitted),
+    phone: text(item.phone),
+    fields: Array.isArray(item.fields) ? item.fields.map((field) => mapField(field as Record<string, unknown>)) : [],
+    answers: Array.isArray(item.answers)
+      ? item.answers.map((answer) => {
+          const row = answer as Record<string, unknown>;
+          return { fieldId: Number(row.fieldId), value: text(row.value) };
+        })
+      : [],
+    community: mapCommunity(item.community),
+  };
+}
+
 export async function loadForms() {
   const { data, error } = await supabase.rpc("list_my_forms");
-  dbError(error, "Could not load forms.");
+  dbError(error, "Could not load queries.");
   const payload = (data ?? {}) as Record<string, unknown>;
-  const forms = Array.isArray(payload.forms)
-    ? payload.forms.map((item) => {
-        const form = item as Record<string, unknown>;
-        return {
-          id: Number(form.id),
-          title: text(form.title),
-          note: text(form.note),
-          closed: Boolean(form.closed),
-          results: text(form.results),
-          homes: form.homes == null ? null : Number(form.homes),
-          submitted: Boolean(form.submitted),
-          phone: text(form.phone),
-          fields: Array.isArray(form.fields) ? form.fields.map((field) => mapField(field as Record<string, unknown>)) : [],
-          answers: Array.isArray(form.answers)
-            ? form.answers.map((answer) => {
-                const row = answer as Record<string, unknown>;
-                return { fieldId: Number(row.fieldId), value: text(row.value) };
-              })
-            : [],
-        } satisfies CommunityForm;
-      })
-    : [];
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  const { data: account } = userId
+    ? await supabase.from("profiles").select("role").eq("user_id", userId).maybeSingle()
+    : { data: null };
+  const canCreate = account?.role === "admin";
   return {
     access: accessOf(payload.access),
+    canCreate,
     flat: payload.flat ? text(payload.flat) : null,
-    forms,
+    forms: Array.isArray(payload.forms)
+      ? payload.forms.map((item) => mapForm(item as Record<string, unknown>))
+      : [],
   };
+}
+
+export async function createQuery(input: {
+  title: string
+  note?: string
+  visibility?: "public" | "private"
+  resultsView?: string
+  askSignin?: boolean
+  questions: {
+    label: string
+    kind: "text" | "long" | "date" | "choice"
+    required?: boolean
+    choices?: string
+  }[]
+}) {
+  const { data, error } = await supabase.rpc("create_community_form", {
+    title: input.title,
+    note: input.note || "",
+    visibility: input.visibility || "private",
+    results_view: input.resultsView === "admins" || input.resultsView === "own" || input.resultsView === "link"
+      ? input.resultsView
+      : "community",
+    ask_signin: Boolean(input.askSignin),
+    questions: input.questions.map((question) => ({
+      label: question.label,
+      kind: question.kind,
+      required: Boolean(question.required),
+      choices: question.choices || "",
+    })),
+  });
+  dbError(error, "Could not create that query.");
+  return data as { ok: boolean; id: number; message: string };
 }
 
 export async function submitForm(id: number, phone: string, answers: { fieldId: number; value: string }[]) {

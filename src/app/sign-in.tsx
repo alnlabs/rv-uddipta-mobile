@@ -35,7 +35,11 @@ export default function SignInScreen() {
       const appUrl = appReturnUrl();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: appUrl, skipBrowserRedirect: true },
+        options: {
+          redirectTo: appUrl,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: "select_account" },
+        },
       });
       if (error) throw error;
       if (!data.url) throw new Error("Sign-in did not start.");

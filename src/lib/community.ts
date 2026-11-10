@@ -20,10 +20,36 @@ function label(role: string) {
   return LABELS[role] || role;
 }
 
-function phonePlace(role: string) {
+function phonePlace(role: string, superAdmin = false) {
+  if (superAdmin) return "office";
   if (role === "security") return "gate";
   if (role === "staff" || role === "facility") return "work";
   return "home";
+}
+
+function localSuperAdminEmail(email: string | null | undefined) {
+  const value = email?.trim().toLowerCase();
+  if (!value) return false;
+  const listed = (process.env.EXPO_PUBLIC_ADMIN_EMAILS || "")
+    .split(",")
+    .map((item: string) => item.trim().toLowerCase())
+    .filter(Boolean);
+  return listed.includes(value);
+}
+
+async function loadSuperAdminFlag(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  if (!session) return false;
+  const local = localSuperAdminEmail(session.user.email);
+  try {
+    const { data: flagged, error } = await supabase.rpc("is_platform_admin");
+    // DB platform_admins is source when the migration is live; env is fallback / OR.
+    if (!error) return Boolean(flagged) || local;
+  } catch {
+    /* RPC missing until db push */
+  }
+  return local;
 }
 
 function greeting(name: string) {
@@ -78,11 +104,14 @@ export async function loadAccount(): Promise<Account> {
     wing = flat?.wing ? String(flat.wing) : null;
   }
 
-  const { data: held } = await supabase.from("person_roles").select("role").eq("user_id", user.id);
-  const roleNames = [...new Set((held?.length ? held.map((row) => String(row.role)) : [role]))];
-  const place = phonePlace(role);
+  const superAdmin = await loadSuperAdminFlag();
+  const { data: held } = superAdmin
+    ? { data: [] as { role: string }[] }
+    : await supabase.from("person_roles").select("role").eq("user_id", user.id);
+  const roleNames = [...new Set([role, ...(held ?? []).map((row) => String(row.role))])];
+  const place = phonePlace(role, superAdmin);
   let claimNote: string | null = null;
-  if (!flatLookupFailed && place === "home" && !flatNumber && claimsAFlat) {
+  if (!superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat) {
     const { data: request } = await supabase
       .from("registration_requests")
       .select("status, flat_number")
@@ -102,19 +131,21 @@ export async function loadAccount(): Promise<Account> {
   return {
     greeting: greeting(name),
     name,
-    role,
-    roleLabel: label(role),
+    role: superAdmin ? "admin" : role,
+    roleLabel: superAdmin ? "Super admin" : label(role),
     place,
-    roles: roleNames.map((item) => ({ role: item, label: label(item) })),
-    canSwitch: roleNames.length > 1,
+    roles: superAdmin ? [{ role: "admin", label: "Super admin" }] : roleNames.map((item) => ({ role: item, label: label(item) })),
+    canSwitch: !superAdmin && roleNames.length > 1,
     flatNumber: place === "home" ? flatNumber : null,
     wing: place === "home" ? wing : null,
     home: claimNote,
-    needsClaim: !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat,
+    needsClaim: !superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat,
+    superAdmin,
   };
 }
 
 export async function switchAccountRole(role: string) {
+  if (await loadSuperAdminFlag()) throw new Error("Super admin accounts stay on the platform screens.");
   const { error } = await supabase.rpc("switch_my_role", { next_role: role });
   dbError(error, "Could not switch.");
   return phonePlace(role);
@@ -456,13 +487,23 @@ export async function markAllNotificationsRead() {
 
 export function notificationPath(kind: string, href: string) {
   const value = `${kind} ${href}`.toLowerCase();
+  const neighbour = href.match(/neighbour\/([A-Za-z0-9-]+)/i) || href.match(/members\?q=([A-Za-z0-9-]+)/i);
+  if (neighbour) return `/(resident)/neighbour/${neighbour[1].toUpperCase()}`;
+  if (value.includes("connect")) return "/(resident)/neighbours";
   const passId = href.match(/pass\/(\d+)/) || href.match(/visitors?\/(\d+)/);
   if (passId) return `/(resident)/pass/${passId[1]}`;
   if (value.includes("delivery")) return "/(resident)/notifications";
   if (value.includes("visitor") || value.includes("pass") || value.includes("history")) {
     return "/(resident)/history";
   }
-  if (value.includes("registration") || value.includes("approved")) return "/(resident)/claim";
+  if (value.includes("registration") || value.includes("approved") || value.includes("approval")) {
+    return value.includes("waiting") || value.includes("join") || value.includes("claim")
+      ? "/(resident)/approvals"
+      : "/(resident)/claim";
+  }
+  if (value.includes("account/requests") || value.includes("/account/requests")) {
+    return "/(resident)/office-requests";
+  }
   if (value.includes("notice") || value.includes("announce") || value.includes("meeting") || value.includes("maintenance")) {
     return "/(resident)/notices";
   }
@@ -473,10 +514,13 @@ export function notificationPath(kind: string, href: string) {
   if (value.includes("event")) return "/(resident)/events";
   if (value.includes("poll")) return "/(resident)/polls";
   if (value.includes("form")) return "/(resident)/forms";
-  if (value.includes("reply") || value.includes("feed")) return "/(resident)/feed";
-  if (value.includes("task") || value.includes("work")) return "/(staff)/tasks";
+  if (value.includes("booking") || value.includes("amenit")) return "/(resident)/amenities";
+  if (value.includes("note_reply") || (value.includes("reply") && value.includes("request"))) {
+    return "/(resident)/requests";
+  }
+  if (value.includes("reply") || value.includes("feed")) return "/(resident)/(tabs)/feed";
+  if (value.includes("task") || value.includes("work") || value.includes("account/jobs")) return "/(staff)/(tabs)/tasks";
   if (value.includes("committee")) return "/(resident)/committee";
-  if (value.includes("amenit")) return "/(resident)/amenities";
   if (value.includes("parking") || value.includes("vehicle")) return "/(resident)/parking";
   if (value.includes("request") || value.includes("note")) return "/(resident)/requests";
   return "/(resident)/notifications";
@@ -485,6 +529,8 @@ export function notificationPath(kind: string, href: string) {
 export async function answerArrival(passId: number, allow: boolean) {
   const { error } = await supabase.rpc("answer_arrival", { pass_id: passId, allow });
   dbError(error, "Could not send your answer.");
+  const { flushPushOutbox } = await import("@/lib/pushFlush");
+  await flushPushOutbox();
 }
 
 export async function cancelPass(passId: number) {
@@ -535,6 +581,8 @@ export async function loadHelp() {
 export async function setGateStatus(passId: number, status: "waiting" | "inside" | "left") {
   const { error } = await supabase.rpc("gate_set_status", { pass_id: passId, next_status: status });
   dbError(error, "Could not record that.");
+  const { flushPushOutbox } = await import("@/lib/pushFlush");
+  await flushPushOutbox();
 }
 
 export async function loadGatePasses() {
@@ -637,6 +685,8 @@ export async function recordDelivery(flatNumber: string, label: string) {
     label: label.trim(),
   });
   dbError(error, "Could not record the delivery.");
+  const { flushPushOutbox } = await import("@/lib/pushFlush");
+  await flushPushOutbox();
   if (data && typeof data === "object" && "notified" in data) {
     return Boolean((data as { notified?: boolean }).notified);
   }

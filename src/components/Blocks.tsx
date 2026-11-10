@@ -138,19 +138,18 @@ export function HubCard({
   detail,
   onPress,
   wide = false,
-  office = false,
 }: {
   icon: IconName
   title: string
   detail: string
   onPress: () => void
   wide?: boolean
-  office?: boolean
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[
+      android_ripple={{ color: "transparent" }}
+      style={({ pressed }) => [
         ui.surface,
         {
           flex: wide ? undefined : 1,
@@ -158,7 +157,8 @@ export function HubCard({
           padding: 16,
           gap: 10,
           justifyContent: "space-between",
-          backgroundColor: office ? "rgba(180, 83, 9, 0.06)" : colors.white,
+          backgroundColor: colors.white,
+          opacity: pressed ? 0.96 : 1,
         },
       ]}
     >
@@ -167,16 +167,16 @@ export function HubCard({
           width: 40,
           height: 40,
           borderRadius: 14,
-          backgroundColor: office ? "rgba(180, 83, 9, 0.12)" : colors.brandSoft,
+          backgroundColor: colors.brandSoft,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Icon name={icon} color={office ? colors.goldInk : colors.gold} size={20} />
+        <Icon name={icon} color={colors.gold} size={20} />
       </View>
-      <View style={{ gap: 4 }}>
-        <Text style={ui.cardTitle}>{title}</Text>
-        <Text style={ui.meta}>{detail}</Text>
+      <View style={{ gap: 4, minWidth: 0 }}>
+        <Text style={ui.cardTitle} numberOfLines={2}>{title}</Text>
+        <Text style={ui.meta} numberOfLines={3}>{detail}</Text>
       </View>
     </Pressable>
   );

@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { TextButton } from "@/components/Blocks";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadPasses } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -30,12 +30,13 @@ export default function HistoryScreen() {
 
   return (
     <Screen
+      busy={!ready && !message}
       title="Visitors"
       onRefresh={load}
-      action={canCreate ? <TextButton label="Invite" onPress={() => router.push("/(resident)/invite")} /> : undefined}
+      action={canCreate ? <TextButton label="Invite"
+      onPress={() => router.push("/(resident)/invite")} /> : undefined}
     >
       {message ? <Note text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && passes.length === 0 ? <Text style={ui.body}>No passes yet.</Text> : null}
       {passes.map((pass) => (
         <Pressable key={pass.id} onPress={() => router.push(`/(resident)/pass/${pass.id}`)} style={ui.card}>

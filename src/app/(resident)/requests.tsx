@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { HtmlBody } from "@/components/HtmlText";
+import { Note, Screen } from "@/components/Screen";
 import { loadRequests } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -25,14 +26,13 @@ export default function RequestsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen title="Complaints" onRefresh={load}>
+    <Screen title="Complaints" onRefresh={load} busy={!ready && !message}>
       {message ? <Note text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && items.length === 0 ? <Text style={ui.body}>No complaints yet.</Text> : null}
       {items.map((item) => (
         <Pressable key={item.id} accessibilityRole="button" onPress={() => router.push(`/(resident)/request/${item.id}`)} style={ui.card}>
           <Text style={ui.label}>{item.category} · {item.status}</Text>
-          <Text style={ui.cardTitle}>{item.body}</Text>
+          <HtmlBody html={item.body} lines={2} style={ui.cardTitle} />
           <Text style={ui.meta}>{item.date}</Text>
         </Pressable>
       ))}

@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Empty, PageTitle } from "@/components/Blocks";
+import { Empty } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
-import { Loading, Screen } from "@/components/Screen";
+import { Screen } from "@/components/Screen";
 import { loadNotices, serviceSnapshot, type ServiceLine } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -30,11 +30,8 @@ export default function StatusScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen title="Community status" onRefresh={load}>
-      <PageTitle
-        kicker="Community"
-        detail="Taken from official notices. A service without a matching notice is unavailable. This does not mean it is running normally."
-      />
+    <Screen title="Community status" onRefresh={load} busy={!ready && !message}>
+      <Text style={ui.body}>Taken from official notices. A service without a matching notice is unavailable. This does not mean it is running normally.</Text>
       <Text style={ui.meta}>{updated ? `Last updated ${updated}` : "Last updated: not available"}</Text>
       {message ? (
         <>
@@ -44,7 +41,6 @@ export default function StatusScreen() {
           </Pressable>
         </>
       ) : null}
-      {!ready ? <Loading /> : null}
       {lines.map((line) =>
         line.published && line.noticeId ? (
           <Pressable key={line.key} accessibilityRole="button" onPress={() => router.push(`/(resident)/notice/${line.noticeId}`)} style={ui.card}>

@@ -22,6 +22,12 @@ export async function signInWithPhoneGoogle() {
   if (Platform.OS === "android") {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   }
+  // Clear the cached Google account so the account picker appears every time.
+  try {
+    await GoogleSignin.signOut();
+  } catch {
+    // No prior Google session — continue to sign-in.
+  }
   const response = await GoogleSignin.signIn();
   if (response.type !== "success") return false;
   const idToken = response.data.idToken;

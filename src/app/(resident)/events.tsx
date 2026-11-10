@@ -1,9 +1,11 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Banner, Empty, PageTitle, SectionLabel, TextButton } from "@/components/Blocks";
+import { Text } from "react-native";
+import { Banner, Empty, SectionLabel, TextButton } from "@/components/Blocks";
 import { PostCard } from "@/components/PostCard";
-import { Loading, Screen } from "@/components/Screen";
+import { Screen } from "@/components/Screen";
 import { loadBoard, type FeedPost } from "@/lib/feed";
+import { ui } from "@/theme";
 
 export default function EventsScreen() {
   const router = useRouter();
@@ -34,13 +36,14 @@ export default function EventsScreen() {
 
   return (
     <Screen
+      busy={!ready && !message}
       title="Events"
       onRefresh={load}
-      action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=event")} /> : undefined}
+      action={canPost ? <TextButton label="New"
+      onPress={() => router.push("/(resident)/post/new?kind=event")} /> : undefined}
     >
-      <PageTitle kicker="Community" detail="The date sits beside the plan. An RSVP means you are going." />
+      <Text style={ui.body}>The date sits beside the plan. An RSVP means you are going.</Text>
       {message ? <Banner text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && !available ? <Empty title="Events unavailable" detail="Events are not available on your account." /> : null}
       {ready && available ? <SectionLabel title="Upcoming" /> : null}
       {ready && available && upcoming.length === 0 ? <Empty title="No upcoming events" detail="A new date will appear here." /> : null}

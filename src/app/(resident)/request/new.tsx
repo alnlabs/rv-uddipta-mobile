@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput } from "react-native";
 import { useRouter } from "expo-router";
-import { Chips, PageTitle } from "@/components/Blocks";
+import { Chips } from "@/components/Blocks";
 import { Note, Screen } from "@/components/Screen";
 import { REQUEST_CATEGORIES, sendRequest } from "@/lib/community";
 import { colors, ui } from "@/theme";
@@ -36,7 +36,7 @@ export default function NewRequestScreen() {
 
   return (
     <Screen title="Raise a complaint">
-      <PageTitle kicker="Office" detail="The office sees this on your home. Attach a photo from the website if you need one. This form stores the written complaint." />
+      <Text style={ui.body}>The office sees this on your home. Attach a photo from the website if you need one.</Text>
       <Text style={ui.label}>Category</Text>
       <Chips options={categories} value={category} onChange={setCategory} />
       <TextInput

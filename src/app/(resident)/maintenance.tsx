@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Empty, PageTitle, SectionLabel } from "@/components/Blocks";
+import { Empty, SectionLabel } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
-import { Loading, Screen } from "@/components/Screen";
+import { Screen } from "@/components/Screen";
 import { loadNotices } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -28,11 +28,8 @@ export default function MaintenanceScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen title="Maintenance" onRefresh={load}>
-      <PageTitle
-        kicker="Office"
-        detail="Official maintenance notices for the community. Dues and receipts appear only when the office publishes a billing record for your home."
-      />
+    <Screen title="Maintenance" onRefresh={load} busy={!ready && !message}>
+      <Text style={ui.body}>Official maintenance notices. Dues and receipts appear when the office publishes a billing record for your home.</Text>
       {message ? (
         <>
           <Text style={ui.error}>{message}</Text>
@@ -41,7 +38,6 @@ export default function MaintenanceScreen() {
           </Pressable>
         </>
       ) : null}
-      {!ready ? <Loading /> : null}
       {ready ? <SectionLabel title="Notices" /> : null}
       {ready && items.length === 0 ? <Empty title="No maintenance notices" detail="A shutdown or repair notice will appear here." /> : null}
       {items.map((item) => (

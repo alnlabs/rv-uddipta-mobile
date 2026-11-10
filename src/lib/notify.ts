@@ -2,8 +2,8 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { isRunningInExpoGo } from "expo";
 import { Platform } from "react-native";
-import { memberFetch } from "@/lib/api";
 import { notificationPath } from "@/lib/community";
+import { supabase } from "@/lib/supabase";
 
 type NotificationsModule = typeof import("expo-notifications");
 
@@ -26,7 +26,7 @@ if (Notifications) {
   });
 }
 
-export async function registerPush(token: string) {
+export async function registerPush(_token: string) {
   if (!Notifications || !Device.isDevice) return;
   const current = await Notifications.getPermissionsAsync();
   const permission = current.granted
@@ -44,10 +44,11 @@ export async function registerPush(token: string) {
     Constants.easConfig?.projectId;
   if (!projectId) return;
   const push = await Notifications.getExpoPushTokenAsync({ projectId });
-  await memberFetch("/device", token, {
-    method: "POST",
-    body: JSON.stringify({ token: push.data }),
-  }).catch(() => undefined);
+  try {
+    await supabase.rpc("register_my_device", { push_token: push.data });
+  } catch {
+    /* ignore token save failures */
+  }
 }
 
 export function pathFromPush(data: Record<string, unknown> | undefined) {

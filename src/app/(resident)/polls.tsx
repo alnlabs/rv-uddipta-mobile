@@ -1,9 +1,11 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Banner, Empty, PageTitle, SectionLabel, TextButton } from "@/components/Blocks";
+import { Text } from "react-native";
+import { Banner, Empty, SectionLabel, TextButton } from "@/components/Blocks";
 import { PostCard } from "@/components/PostCard";
-import { Loading, Screen } from "@/components/Screen";
+import { Screen } from "@/components/Screen";
 import { loadBoard, type FeedPost } from "@/lib/feed";
+import { ui } from "@/theme";
 
 export default function PollsScreen() {
   const router = useRouter();
@@ -34,13 +36,14 @@ export default function PollsScreen() {
 
   return (
     <Screen
+      busy={!ready && !message}
       title="Polls"
       onRefresh={load}
-      action={canPost ? <TextButton label="New" onPress={() => router.push("/(resident)/post/new?kind=poll")} /> : undefined}
+      action={canPost ? <TextButton label="New"
+      onPress={() => router.push("/(resident)/post/new?kind=poll")} /> : undefined}
     >
-      <PageTitle kicker="Community" detail="A single-choice poll keeps your latest vote. More than one choice can be changed until it closes." />
+      <Text style={ui.body}>A single-choice poll keeps your latest vote. More than one choice can be changed until it closes.</Text>
       {message ? <Banner text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && !available ? <Empty title="Polls unavailable" detail="Polls are not available on your account." /> : null}
       {ready && available && posts.length === 0 ? <Empty title="No polls yet" detail="A question for the community will show its choices here." /> : null}
       {open.length ? <SectionLabel title="Open" /> : null}

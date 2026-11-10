@@ -23,12 +23,14 @@ function dayLabel(value: string) {
   });
 }
 
+const PURPOSES = ["Guest", "Delivery", "Family", "Service"] as const;
+
 export default function InviteScreen() {
   const router = useRouter();
   const dates = useMemo(() => [0, 1, 2, 3, 4, 5, 6].map(dayOffset), []);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [purpose, setPurpose] = useState("");
+  const [purpose, setPurpose] = useState<string>("Guest");
   const [visitOn, setVisitOn] = useState(dates[0]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -62,11 +64,26 @@ export default function InviteScreen() {
 
   return (
     <Screen title="Invite a visitor">
-      <Text style={ui.body}>They show the pass at the gate. They do not get an account. After create, you can share on WhatsApp.</Text>
+      <Text style={ui.body}>Creates a QR pass they show at the gate. They do not get an account. Share the link on WhatsApp after create.</Text>
       <View style={ui.card}>
         <TextInput value={name} onChangeText={setName} placeholder="Visitor name" placeholderTextColor={colors.placeholder} style={ui.field} />
         <TextInput value={phone} onChangeText={setPhone} placeholder="Phone" placeholderTextColor={colors.placeholder} style={ui.field} keyboardType="phone-pad" />
-        <TextInput value={purpose} onChangeText={setPurpose} placeholder="Why they are coming" placeholderTextColor={colors.placeholder} style={ui.field} />
+        <Text style={ui.label}>Why they are coming</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {PURPOSES.map((item) => {
+            const on = purpose === item;
+            return (
+              <Pressable
+                key={item}
+                onPress={() => setPurpose(item)}
+                style={[ui.button, { paddingVertical: 10, backgroundColor: on ? colors.button : colors.white, borderWidth: 1, borderColor: colors.button }]}
+              >
+                <Text style={[ui.buttonText, { fontSize: 13, color: on ? colors.onButton : colors.button }]}>{item}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <TextInput value={purpose} onChangeText={setPurpose} placeholder="Or type a short reason" placeholderTextColor={colors.placeholder} style={ui.field} />
         <Text style={ui.label}>Visit day</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {dates.map((day) => (

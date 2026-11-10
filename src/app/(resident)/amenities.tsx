@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { bookAmenity, loadAmenities } from "@/lib/office";
 import { indiaDay } from "@/lib/day";
 import { colors, ui } from "@/theme";
@@ -61,12 +61,8 @@ export default function AmenitiesScreen() {
   const dates = [0, 1, 2, 3, 4, 5, 6].map(dayOffset);
 
   return (
-    <Screen onRefresh={load}>
-      <Back />
-      <Text style={ui.eyebrow}>Services</Text>
-      <Text style={ui.title}>Amenities</Text>
+    <Screen title="Amenities" onRefresh={load} busy={!ready && !message}>
       <Text style={ui.body}>Book a shared space. The office confirms the slot.</Text>
-      {!ready ? <Loading /> : null}
       {data?.mine.length ? <Text style={ui.label}>Your bookings</Text> : null}
       {data?.mine.map((item) => (
         <View key={item.id} style={ui.card}>

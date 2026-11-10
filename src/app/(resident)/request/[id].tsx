@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Image, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { HtmlBody } from "@/components/HtmlText";
+import { Note, Screen } from "@/components/Screen";
 import { loadRequests, replyRequest } from "@/lib/community";
 import { colors, ui } from "@/theme";
 
@@ -44,19 +45,18 @@ export default function RequestScreen() {
   }
 
   return (
-    <Screen title={item?.category || "Complaint"} onRefresh={load}>
-      {!ready ? <Loading /> : null}
+    <Screen title={item?.category || "Complaint"} onRefresh={load} busy={!ready && !message}>
       {item ? (
         <>
           <Text style={ui.label}>{item.status} · {item.date}</Text>
           {item.photo ? (
             <Image source={{ uri: item.photo }} accessibilityLabel="Complaint photo" style={{ width: "100%", height: 220, borderRadius: 16 }} />
           ) : null}
-          <Text style={ui.body}>{item.body}</Text>
+          <HtmlBody html={item.body} />
           {item.messages.map((line) => (
             <View key={line.id} style={ui.card}>
               <Text style={ui.label}>{line.who}</Text>
-              <Text style={ui.body}>{line.body}</Text>
+              <HtmlBody html={line.body} />
             </View>
           ))}
           {item.canReply ? (

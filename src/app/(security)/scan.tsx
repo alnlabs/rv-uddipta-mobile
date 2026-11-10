@@ -60,7 +60,7 @@ export default function ScanScreen() {
         <Back />
         <Text style={ui.eyebrow}>Gate</Text>
         <Text style={ui.title}>Scan pass</Text>
-        <Text style={ui.body}>Point at the QR or the pass code. A missing result is not an entry.</Text>
+        <Text style={ui.body}>Point at the visitor QR (or the code under it). A missing result is not an entry.</Text>
         {message ? <Note text={message} /> : null}
       </View>
       <CameraView

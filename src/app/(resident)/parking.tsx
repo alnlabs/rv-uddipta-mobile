@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadParking, removeVehicle, saveVehicle } from "@/lib/office";
 import { colors, ui } from "@/theme";
 
@@ -56,12 +56,8 @@ export default function ParkingScreen() {
   }
 
   return (
-    <Screen onRefresh={load}>
-      <Back />
-      <Text style={ui.eyebrow}>Home</Text>
-      <Text style={ui.title}>Parking</Text>
+    <Screen title="Parking" onRefresh={load} busy={!ready && !message}>
       <Text style={ui.body}>{data?.home ? `Vehicles for ${data.home}.` : "Link a home to save your vehicles."}</Text>
-      {!ready ? <Loading /> : null}
       {(data?.vehicles ?? []).map((item) => (
         <View key={item.id} style={ui.card}>
           <Text style={ui.cardTitle}>{item.plate}</Text>

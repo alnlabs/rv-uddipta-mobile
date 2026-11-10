@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadTasks } from "@/lib/community";
 import { isToday, taskStatus, type Task } from "@/lib/tasks";
 import { ui } from "@/theme";
@@ -30,12 +30,11 @@ export default function ScheduleScreen() {
   const later = open.filter((task) => !isToday(task.created_at));
 
   return (
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} busy={!ready && !message}>
       <Text style={ui.eyebrow}>Work</Text>
       <Text style={ui.title}>Schedule</Text>
       <Text style={ui.body}>Shifts are not stored on the phone yet. These are the assignments already given to you.</Text>
       {message ? <Note text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {today.length > 0 ? <Text style={ui.label}>Today</Text> : null}
       {today.map((task) => (
         <Pressable key={task.id} onPress={() => router.push(`/(staff)/task/${task.id}`)} style={ui.card}>

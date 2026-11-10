@@ -1,0 +1,38 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EAS_GRADLE_CACHE": "1",
+        "EXPO_PUBLIC_ADMIN_EMAILS": "alnlabs.com@gmail.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EAS_GRADLE_CACHE": "1",
+        "EXPO_PUBLIC_ADMIN_EMAILS": "alnlabs.com@gmail.com"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EAS_GRADLE_CACHE": "1",
+        "EXPO_PUBLIC_ADMIN_EMAILS": "alnlabs.com@gmail.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

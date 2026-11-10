@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Empty } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import {
   loadNotifications,
   markAllNotificationsRead,
@@ -69,7 +69,7 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <Screen title="Inbox" onRefresh={load}>
+    <Screen title="Inbox" onRefresh={load} busy={!ready && !message}>
       <Text style={ui.body}>Announcements, complaint updates, visitors, and events that were sent to you.</Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
         {([
@@ -92,7 +92,6 @@ export default function NotificationsScreen() {
         </Pressable>
       ) : null}
       {message ? <Note text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && visible.length === 0 ? (
         <Empty title="Nothing in this tab" detail="New alerts will appear here. Pull to refresh." />
       ) : null}

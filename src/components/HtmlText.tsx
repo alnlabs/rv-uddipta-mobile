@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Image, Linking, Text, View, type StyleProp, type TextStyle } from "react-native";
-import { htmlToPlain, looksRich, parseHtml, safeHttpUrl, type HtmlNode } from "@/lib/html";
+import { htmlToPlain, looksRich, normalizeHtml, parseHtml, safeHttpUrl, type HtmlNode } from "@/lib/html";
 import { colors, fonts } from "@/theme";
 
 const body: TextStyle = {
@@ -9,6 +9,27 @@ const body: TextStyle = {
   fontSize: 16,
   lineHeight: 24,
 };
+
+function HtmlImage({ src, alt }: { src: string; alt: string }) {
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <Image
+      source={{ uri: src }}
+      accessibilityLabel={alt}
+      resizeMode="cover"
+      onLoad={() => setReady(true)}
+      onError={() => setFailed(true)}
+      style={{
+        width: "100%",
+        height: ready ? 220 : 0,
+        borderRadius: 12,
+        opacity: ready ? 1 : 0,
+      }}
+    />
+  );
+}
 
 function alignOf(attrs: Record<string, string>) {
   const fromClass = attrs.class?.match(/ql-align-(center|right|justify)/i);
@@ -99,14 +120,7 @@ function renderBlock(node: Extract<HtmlNode, { kind: "el" }>, base: TextStyle, k
   if (node.tag === "img") {
     const src = safeHttpUrl(node.attrs.src || "");
     if (!src) return null;
-    return (
-      <Image
-        key={key}
-        source={{ uri: src }}
-        accessibilityLabel={node.attrs.alt || "Image"}
-        style={{ width: "100%", height: 200, borderRadius: 12, backgroundColor: colors.line }}
-      />
-    );
+    return <HtmlImage key={key} src={src} alt={node.attrs.alt || "Image"} />;
   }
   if (node.tag === "ul" || node.tag === "ol") {
     const items = node.children.filter((child): child is Extract<HtmlNode, { kind: "el" }> => child.kind === "el" && child.tag === "li");
@@ -161,14 +175,21 @@ export function HtmlBody({
   lines?: number
   style?: StyleProp<TextStyle>
 }) {
-  const text = htmlToPlain(html);
-  if (!text && !/<img\b/i.test(html)) return null;
-  if (lines || !looksRich(html)) {
+  const source = normalizeHtml(html);
+  const text = htmlToPlain(source);
+  const hasImage = /<img\b/i.test(source);
+  if (!text && !hasImage) return null;
+  // List/card previews stay plain text so Quill HTML never draws image skeletons in a card.
+  if (lines) {
+    if (!text) return null;
     return (
       <Text numberOfLines={lines} style={[body, style]}>
-        {lines ? text.replace(/\s+/g, " ") : text}
+        {text.replace(/\s+/g, " ")}
       </Text>
     );
   }
-  return <View style={{ gap: 8 }}>{renderBlocks(parseHtml(html), body)}</View>;
+  if (!looksRich(source)) {
+    return <Text style={[body, style]}>{text}</Text>;
+  }
+  return <View style={{ gap: 8 }}>{renderBlocks(parseHtml(source), { ...body, ...(style as TextStyle) })}</View>;
 }

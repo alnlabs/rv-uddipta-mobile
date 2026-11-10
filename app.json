@@ -15,7 +15,7 @@
           "backgroundColor": "#854225",
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "imageWidth": 320
+          "imageWidth": 280
         }
       ],
       "expo-router",
@@ -56,6 +56,11 @@
     },
     "web": {
       "favicon": "./assets/icon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c332aca8-2d12-424a-a632-5cca60482d43"
+      }
     }
   }
 }

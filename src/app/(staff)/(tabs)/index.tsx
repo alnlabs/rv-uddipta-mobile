@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Icon } from "@/components/Icon";
-import { Loading, Masthead, Note, Screen } from "@/components/Screen";
+import { Masthead, Note, Screen } from "@/components/Screen";
 import { loadTasks } from "@/lib/community";
 import { isToday, taskStatus, type Task } from "@/lib/tasks";
 import { colors, ui } from "@/theme";
@@ -31,10 +31,9 @@ export default function StaffHomeScreen() {
   const today = open.filter((task) => isToday(task.created_at));
 
   return (
-    <Screen hero onRefresh={load}>
+    <Screen hero onRefresh={load} busy={!ready && !message}>
       <Masthead title="Today" detail={ready ? (open.length ? `${open.length} open` : "Nothing is assigned.") : undefined} />
       {message ? <Note text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {next ? (
         <Pressable onPress={() => router.push(`/(staff)/task/${next.id}`)} style={[ui.card, { flexDirection: "row", alignItems: "center", gap: 12, borderLeftWidth: 3, borderLeftColor: colors.gold }]}>
           <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: colors.brandSoft, alignItems: "center", justifyContent: "center" }}>

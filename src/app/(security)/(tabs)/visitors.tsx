@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadGatePasses } from "@/lib/community";
-import { ui } from "@/theme";
+import { colors, ui } from "@/theme";
 
 const GROUPS = [
+  ["waiting", "At the gate"],
   ["pending", "Waiting for the resident"],
   ["expected", "Expected today"],
   ["inside", "Inside"],
@@ -30,11 +31,22 @@ export default function GateVisitorsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} busy={!groups && !message}>
       <Text style={ui.eyebrow}>Gate</Text>
       <Text style={ui.title}>Visitors</Text>
+      <Text style={ui.body}>Guests and delivery people handled on this phone.</Text>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
+        <Pressable onPress={() => router.push("/(security)/scan")} style={[ui.button, { flex: 1 }]}>
+          <Text style={ui.buttonText}>Scan QR</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/(security)/walk-in")}
+          style={[ui.button, { flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.button }]}
+        >
+          <Text style={[ui.buttonText, { color: colors.button }]}>No pass</Text>
+        </Pressable>
+      </View>
       {message ? <Note text={message} /> : null}
-      {!groups && !message ? <Loading /> : null}
       {GROUPS.map(([key, title]) => {
         const rows = groups?.[key] ?? [];
         if (!rows.length) return null;
@@ -46,7 +58,10 @@ export default function GateVisitorsScreen() {
           >
             {index === 0 ? <Text style={ui.label}>{title}</Text> : null}
             <Text style={ui.cardTitle}>{pass.visitor_name}</Text>
-            <Text style={ui.body}>{pass.flat_number} · {pass.code} · {pass.visit_on}</Text>
+            <Text style={ui.body}>
+              {pass.flat_number} · {pass.code}
+              {pass.purpose ? ` · ${pass.purpose}` : ""} · {pass.visit_on}
+            </Text>
           </Pressable>
         ));
       })}

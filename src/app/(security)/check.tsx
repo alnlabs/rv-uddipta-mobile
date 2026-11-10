@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { CallButton } from "@/components/CallButton";
+import { Back, Note, Screen } from "@/components/Screen";
 import { lookupPass, setGateStatus } from "@/lib/community";
 import { colors, fonts, ui } from "@/theme";
 
@@ -16,7 +17,7 @@ const STATUS: Record<string, string> = {
 };
 
 export default function CheckScreen() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const { code, walkin } = useLocalSearchParams<{ code: string; walkin?: string }>();
   const [result, setResult] = useState<Awaited<ReturnType<typeof lookupPass>> | null>(null);
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
@@ -25,8 +26,13 @@ export default function CheckScreen() {
   const load = useCallback(async () => {
     setReady(false);
     try {
-      setResult(await lookupPass(String(code || "")));
-      setMessage("");
+      const next = await lookupPass(String(code || ""));
+      setResult(next);
+      if (walkin === "1" && next?.found && next.status === "waiting" && next.answer !== "allowed") {
+        setMessage("Home notified. Wait for them to allow this guest.");
+      } else {
+        setMessage("");
+      }
       setReady(true);
       return true;
     } catch (error) {
@@ -35,7 +41,7 @@ export default function CheckScreen() {
       setReady(true);
       return false;
     }
-  }, [code]);
+  }, [code, walkin]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -68,11 +74,11 @@ export default function CheckScreen() {
           : "Not verified";
 
   return (
-    <Screen onRefresh={async () => { await load(); }}>
+    <Screen busy={!ready && !message}
+        onRefresh={async () => { await load(); }}>
       <Back />
       <Text style={ui.eyebrow}>Gate</Text>
       <Text style={ui.title}>{title}</Text>
-      {!ready ? <Loading /> : null}
       {ready && result && !result.found ? <Text style={ui.body}>No pass matches that code.</Text> : null}
       {result?.found ? (
         <View style={ui.card}>
@@ -86,6 +92,9 @@ export default function CheckScreen() {
             <Text style={ui.body}>Wait for the resident to allow this visitor.</Text>
           ) : !ok && result.status !== "left" ? (
             <Text style={ui.body}>Do not let this visitor in.</Text>
+          ) : null}
+          {result.home ? (
+            <CallButton home={String(result.home)} which="owner" label="Call this home" showNumber={false} />
           ) : null}
           {ok && result.status === "expected" ? (
             <Pressable disabled={saving} onPress={() => record("waiting")} style={ui.button}>
@@ -104,7 +113,7 @@ export default function CheckScreen() {
           ) : null}
         </View>
       ) : null}
-      {message ? <Note text={message} tone={message.endsWith("recorded.") || message.endsWith("told.") ? "ok" : "error"} /> : null}
+      {message ? <Note text={message} tone={message.endsWith("recorded.") || message.endsWith("told.") || message.startsWith("Home notified") ? "ok" : "error"} /> : null}
     </Screen>
   );
 }

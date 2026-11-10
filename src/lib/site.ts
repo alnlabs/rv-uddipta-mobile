@@ -12,5 +12,5 @@ export function passShareMessage(input: {
 }) {
   const link = passShareUrl(input.code);
   const when = input.date ? ` on ${input.date}` : "";
-  return `Visitor pass for ${input.visitorName} at RV Uddiipta ${input.home}${when}.\nCode: ${input.code}\nShow this at the gate: ${link}`;
+  return `Visitor pass for ${input.visitorName} at RV Uddiipta ${input.home}${when}.\nShow the QR at the gate (or code ${input.code}):\n${link}`;
 }

@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import { Alert, Image, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { Avatar, Banner, PageTitle, Panel, SectionLabel } from "@/components/Blocks";
+import { Avatar, Banner, Panel, SectionLabel } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
-import { Loading, Screen } from "@/components/Screen";
+import { Screen } from "@/components/Screen";
 import {
   closePoll,
   loadThread,
@@ -84,7 +84,7 @@ export default function PostScreen() {
           run(async () => {
             await removePost(id);
             if (router.canGoBack()) router.back();
-            else router.replace("/(resident)/feed");
+            else router.replace("/(resident)/(tabs)/feed");
           }).catch(() => undefined);
         },
       },
@@ -92,12 +92,8 @@ export default function PostScreen() {
   }
 
   return (
-    <Screen title={post?.label || "Post"} onRefresh={load}>
-      <PageTitle
-        kicker={post?.author || "Community"}
-        detail={post ? [post.flat, post.date].filter(Boolean).join(" · ") : undefined}
-      />
-      {!ready ? <Loading /> : null}
+    <Screen title={post?.label || "Post"} onRefresh={load} busy={!ready && !message}>
+      {post ? <Text style={ui.meta}>{[post.author, post.flat, post.date].filter(Boolean).join(" · ")}</Text> : null}
       {message ? <Banner text={message} tone={tone} /> : null}
       {post ? (
         <>
@@ -106,7 +102,7 @@ export default function PostScreen() {
             {post.sold ? <Text style={{ color: colors.goldInk, fontFamily: fonts.display, fontWeight: "600" }}>Marked sold</Text> : null}
             <HtmlBody html={post.body} />
             {post.image ? (
-              <Image source={{ uri: post.image }} style={{ width: "100%", height: 220, borderRadius: 16, backgroundColor: colors.line }} />
+              <Image source={{ uri: post.image }} style={{ width: "100%", height: 220, borderRadius: 16 }} />
             ) : null}
           </Panel>
 

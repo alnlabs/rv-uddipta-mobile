@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadTasks } from "@/lib/community";
 import { taskStatus, type Task } from "@/lib/tasks";
 import { ui } from "@/theme";
@@ -28,11 +28,10 @@ export default function TasksScreen() {
   const open = tasks.filter((task) => task.status !== "done");
 
   return (
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} busy={!ready && !message}>
       <Text style={ui.eyebrow}>Work</Text>
       <Text style={ui.title}>My tasks</Text>
       {message ? <Note text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && open.length === 0 ? <Text style={ui.body}>No open tasks.</Text> : null}
       {open.map((task) => (
         <Pressable key={task.id} onPress={() => router.push(`/(staff)/task/${task.id}`)} style={ui.card}>

@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Back, Loading, Note, Screen } from "@/components/Screen";
+import { HtmlBody } from "@/components/HtmlText";
+import { Back, Note, Screen } from "@/components/Screen";
 import { loadTasks, updateTask } from "@/lib/community";
 import { taskStatus, type Task } from "@/lib/tasks";
 import { colors, ui } from "@/theme";
@@ -45,15 +46,14 @@ export default function TaskScreen() {
   }
 
   return (
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} busy={!ready && !message}>
       <Back />
-      {!ready ? <Loading /> : null}
       {task ? (
         <>
           <Text style={ui.label}>{taskStatus(task.status)}</Text>
           <Text style={ui.title}>{task.title}</Text>
           <Text style={ui.body}>{task.place || "Location is with the office"}</Text>
-          {task.body ? <Text style={ui.body}>{task.body}</Text> : null}
+          {task.body ? <HtmlBody html={task.body} /> : null}
           {task.status !== "done" ? (
             <View style={ui.card}>
               <TextInput

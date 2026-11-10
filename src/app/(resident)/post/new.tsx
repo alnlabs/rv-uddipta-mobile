@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import { Image, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { Banner, Chips, PageTitle, Panel } from "@/components/Blocks";
-import { Loading, Screen } from "@/components/Screen";
+import { Banner, Chips, Panel } from "@/components/Blocks";
+import { Screen } from "@/components/Screen";
 import { createPost, editPost, EVENT_TYPES, FEED_TYPES, loadThread, pickPostPhoto, postType } from "@/lib/feed";
 import { colors, ui } from "@/theme";
 
@@ -88,9 +88,8 @@ export default function NewPostScreen() {
   }
 
   return (
-    <Screen title={editing ? "Edit post" : type.label}>
-      <PageTitle kicker={editing ? "Edit" : "Community"} detail={type.prompt} />
-      {!ready ? <Loading /> : null}
+    <Screen title={editing ? "Edit post" : type.label} busy={!ready && !message}>
+      <Text style={ui.body}>{type.prompt}</Text>
       {!editing && types.length > 1 ? (
         <Chips options={types} value={kind} onChange={setKind} />
       ) : null}

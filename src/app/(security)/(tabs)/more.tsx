@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
 import { Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { RoleSwitch } from "@/components/RoleSwitch";
-import { Loading, MenuRow, Note, Screen, SignOut } from "@/components/Screen";
+import { SectionLabel } from "@/components/Blocks";
+import { HtmlBody } from "@/components/HtmlText";
+import { MenuRow, Note, Screen, SignOut } from "@/components/Screen";
 import { loadAccount, loadHelp } from "@/lib/community";
 import { type Account } from "@/lib/place";
 import { ui } from "@/theme";
@@ -26,23 +27,51 @@ export default function SecurityMoreScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const showManage = account?.role === "admin";
+  const showHome = account?.role === "admin"
+    || Boolean(account?.roles.some((item) => item.role === "owner" || item.role === "co_owner" || item.role === "tenant"));
+
   return (
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} busy={!account && !message}>
       <Text style={ui.eyebrow}>Account</Text>
       <Text style={ui.title}>More</Text>
-      {!account && !message ? <Loading /> : null}
       {account ? (
         <>
           <Text style={ui.cardTitle}>{account.name || "Security"}</Text>
           <Text style={ui.body}>{account.roleLabel}</Text>
-          <RoleSwitch roles={account.roles} active={account.role} enabled={account.canSwitch} />
         </>
       ) : null}
-      <Text style={ui.label}>Gate tools</Text>
-      <MenuRow icon="gate" title="Scan pass" detail="Camera needs an installed build" onPress={() => router.push("/(security)/scan")} />
-      <MenuRow icon="people" title="Walk-in visitor" detail="No pass yet" onPress={() => router.push("/(security)/walk-in")} />
-      <Text style={ui.label}>Emergency contacts</Text>
-      <Text style={ui.body}>{contacts || "The office has not published emergency contacts yet."}</Text>
+
+      {showManage || showHome ? (
+        <>
+          <SectionLabel title="Office" />
+          {showManage ? (
+            <MenuRow
+              icon="admin"
+              title="Admin"
+              detail="Approvals, team roles, notices"
+              onPress={() => router.push("/(resident)/(tabs)/admin")}
+            />
+          ) : null}
+          {showHome ? (
+            <MenuRow
+              icon="home"
+              title="Open home"
+              detail="Resident home and community"
+              onPress={() => router.push("/(resident)")}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      <SectionLabel title="Gate tools" />
+      <MenuRow icon="gate" title="Scan QR pass" detail="Visitor or delivery QR" onPress={() => router.push("/(security)/scan")} />
+      <MenuRow icon="people" title="Guest without pass" detail="Notify the home" onPress={() => router.push("/(security)/walk-in?purpose=Guest")} />
+      <MenuRow icon="mail" title="Delivery without pass" detail="Notify the home" onPress={() => router.push("/(security)/walk-in?purpose=Delivery")} />
+      <MenuRow icon="people" title="Call a home" detail="Dial without seeing the number" onPress={() => router.push("/(security)/directory")} />
+
+      <SectionLabel title="Emergency contacts" />
+      {contacts ? <HtmlBody html={contacts} /> : <Text style={ui.body}>The office has not published emergency contacts yet.</Text>}
       {message ? <Note text={message} /> : null}
       <SignOut />
     </Screen>

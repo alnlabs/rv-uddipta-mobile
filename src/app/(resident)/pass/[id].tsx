@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Linking, Pressable, Share, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Loading, Note, Screen } from "@/components/Screen";
+import { PassQr } from "@/components/PassQr";
+import { Note, Screen } from "@/components/Screen";
 import { answerArrival, cancelPass, decidePass, loadPass } from "@/lib/community";
 import { passShareMessage, passShareUrl } from "@/lib/site";
 import { colors, fonts, ui } from "@/theme";
@@ -76,13 +77,20 @@ export default function PassScreen() {
     await Linking.openURL(target).catch(() => undefined);
   }
 
+  const showQr = pass && !["refused", "cancelled", "left"].includes(String(pass.status));
+
   return (
-    <Screen title="Visitor pass" onRefresh={load}>
-      {!ready ? <Loading /> : null}
+    <Screen title="Visitor pass" onRefresh={load} busy={!ready && !message}>
       {pass ? (
         <View style={ui.card}>
           <Text style={ui.label}>{STATUS[String(pass.status)] || String(pass.status)}</Text>
-          <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 32, fontWeight: "600", letterSpacing: 3 }}>{pass.code}</Text>
+          {showQr ? (
+            <>
+              <Text style={[ui.body, { textAlign: "center", marginBottom: 8 }]}>Show this QR at the gate</Text>
+              <PassQr code={String(pass.code)} />
+            </>
+          ) : null}
+          <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 32, fontWeight: "600", letterSpacing: 3, textAlign: "center", marginTop: 12 }}>{pass.code}</Text>
           <Text style={ui.cardTitle}>{pass.visitor_name}</Text>
           <Text style={ui.body}>{pass.flat_number} · {pass.visit_on}</Text>
           {pass.purpose ? <Text style={ui.body}>{pass.purpose}</Text> : null}

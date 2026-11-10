@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Banner, Empty, PageTitle } from "@/components/Blocks";
+import { Banner, Empty } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
-import { Loading, Screen } from "@/components/Screen";
+import { Screen } from "@/components/Screen";
 import { loadNotices } from "@/lib/community";
-import { colors, fonts, ui } from "@/theme";
+import { colors, ui } from "@/theme";
 
 export default function NoticesScreen() {
   const router = useRouter();
@@ -27,17 +27,19 @@ export default function NoticesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen title="Announcements" onRefresh={load}>
-      <PageTitle kicker="Office" detail="Official notes for the community. Resident posts stay in the feed." />
+    <Screen title="Announcements" onRefresh={load} busy={!ready && !message}>
+      <Text style={ui.body}>Official notes for the community. Resident posts stay in the feed.</Text>
       {message ? <Banner text={message} /> : null}
-      {!ready ? <Loading /> : null}
       {ready && items.length === 0 ? <Empty title="No notices yet" detail="An office notice will appear here." /> : null}
       {items.map((item) => (
-        <Pressable key={item.id} onPress={() => router.push(`/(resident)/notice/${item.id}`)} style={[ui.surface, { padding: 16, gap: 8, backgroundColor: "rgba(180, 83, 9, 0.06)" }]}>
+        <Pressable
+          key={item.id}
+          onPress={() => router.push(`/(resident)/notice/${item.id}`)}
+          android_ripple={{ color: "transparent" }}
+          style={({ pressed }) => [ui.surface, { padding: 16, gap: 8, backgroundColor: colors.white, opacity: pressed ? 0.96 : 1 }]}
+        >
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-            <Text style={{ color: colors.goldInk, fontFamily: fonts.display, fontSize: 12, fontWeight: "600" }}>
-              {item.important ? "Important" : item.label}
-            </Text>
+            <Text style={ui.label}>{item.important ? "Important" : item.label}</Text>
             <Text style={ui.meta}>{item.date}{item.read === true ? " · Read" : item.read === false ? " · Unread" : ""}</Text>
           </View>
           <Text style={ui.cardTitle}>{item.title}</Text>
