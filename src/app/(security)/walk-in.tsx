@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Back, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { walkInVisitor } from "@/lib/office";
 import { colors, ui } from "@/theme";
 
@@ -41,10 +41,7 @@ export default function WalkInScreen() {
   }
 
   return (
-    <Screen>
-      <Back />
-      <Text style={ui.eyebrow}>Gate</Text>
-      <Text style={ui.title}>{delivery ? "Delivery person" : "Unplanned guest"}</Text>
+    <Screen title={delivery ? "Delivery person" : "Unplanned guest"}>
       <Text style={ui.body}>
         {delivery
           ? "No QR. Tell the home a delivery person is waiting. Wait for their answer before letting them up."

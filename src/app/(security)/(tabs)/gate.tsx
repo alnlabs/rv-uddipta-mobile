@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { HtmlBody } from "@/components/HtmlText";
-import { Masthead, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadGatePasses, loadHelp } from "@/lib/community";
 import { colors, ui } from "@/theme";
 
@@ -67,8 +67,8 @@ export default function GateScreen() {
   const quiet = ready && pending.length === 0 && waiting.length === 0 && expected.length === 0 && inside.length === 0;
 
   return (
-    <Screen hero onRefresh={load} busy={!ready && !message}>
-      <Masthead title="Gate" detail="For visitors and delivery people. Scan a QR, notify the home, or call a flat." />
+    <Screen title="Gate" showBack={false} onRefresh={load} busy={!ready && !message}>
+      <Text style={ui.body}>Scan a QR, notify the home, or call a flat.</Text>
       <Pressable onPress={() => router.push("/(security)/scan")} style={ui.button}>
         <Text style={ui.buttonText}>Scan QR pass</Text>
       </Pressable>

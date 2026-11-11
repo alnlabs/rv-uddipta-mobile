@@ -144,7 +144,7 @@ export default function SuperAdminHome() {
           }}
         >
           <Text style={{ color: ops.header, fontFamily: fonts.display, fontSize: 15, fontWeight: "600" }}>
-            Office roles
+            People
           </Text>
         </Pressable>
       </View>

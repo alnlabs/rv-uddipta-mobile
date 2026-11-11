@@ -9,7 +9,7 @@ import { BrandScreen } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
 import { finishAuthRedirect, isAuthReturn } from "@/lib/finishAuth";
 import { attachPushRouting, registerPush } from "@/lib/notify";
-import { pathForPlace, superMayVisit } from "@/lib/place";
+import { pathForAccount, publicMayVisit, superMayVisit } from "@/lib/place";
 import { SessionProvider, useSession } from "@/lib/session";
 import { colors } from "@/theme";
 
@@ -43,11 +43,20 @@ function Gate({ children }: { children: ReactNode }) {
     }
     registerPush(session.access_token).catch(() => undefined);
     if (openedFor.current === session.user.id) {
-      // Keep super on admin paths only — not resident home/feed tabs.
       loadAccount()
         .then((account) => {
           if (account.superAdmin && !superMayVisit(segments as string[])) {
             router.replace("/(super)");
+            return;
+          }
+          const publicOnly = Boolean(account.needsJoin || account.joinPending || account.joinBrowse);
+          const onPublic = segments[0] === "(public)";
+          if (publicOnly && !publicMayVisit(segments as string[])) {
+            router.replace(pathForAccount(account));
+            return;
+          }
+          if (!publicOnly && onPublic) {
+            router.replace(pathForAccount(account));
           }
         })
         .catch(() => undefined);
@@ -59,9 +68,7 @@ function Gate({ children }: { children: ReactNode }) {
       .then((account) => {
         openedFor.current = session.user.id;
         setStartError("");
-        if (account.superAdmin) router.replace("/(super)");
-        else if (account.needsClaim) router.replace("/(resident)/claim");
-        else router.replace(pathForPlace(account.place));
+        router.replace(pathForAccount(account));
       })
       .catch((error: unknown) => {
         openedFor.current = null;
@@ -122,6 +129,7 @@ export default function RootLayout() {
     <SessionProvider>
       <Gate>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.page } }}>
+          <Stack.Screen name="(public)" />
           <Stack.Screen name="(super)" />
           <Stack.Screen name="(resident)" />
           <Stack.Screen name="(security)" />

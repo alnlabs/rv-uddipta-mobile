@@ -30,9 +30,7 @@ export default function ScheduleScreen() {
   const later = open.filter((task) => !isToday(task.created_at));
 
   return (
-    <Screen onRefresh={load} busy={!ready && !message}>
-      <Text style={ui.eyebrow}>Work</Text>
-      <Text style={ui.title}>Schedule</Text>
+    <Screen title="Schedule" showBack={false} onRefresh={load} busy={!ready && !message}>
       <Text style={ui.body}>Shifts are not stored on the phone yet. These are the assignments already given to you.</Text>
       {message ? <Note text={message} /> : null}
       {today.length > 0 ? <Text style={ui.label}>Today</Text> : null}

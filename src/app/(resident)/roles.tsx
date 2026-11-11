@@ -31,8 +31,8 @@ export default function SocietyRolesScreen() {
 
   if (!allowed) {
     return (
-      <Screen title="Team roles">
-        <Note text="Team roles are for society admin. Switch to Admin first if you hold that role." />
+      <Screen title="People">
+        <Note text="Team people are for society admin. Switch to Admin first if you hold that role." />
         <Pressable onPress={() => router.replace("/(resident)/(tabs)/admin")} style={ui.button}>
           <Text style={ui.buttonText}>Back to Admin</Text>
         </Pressable>
@@ -42,9 +42,9 @@ export default function SocietyRolesScreen() {
 
   return (
     <RolesAssign
-      title="Team roles"
-      badge="Society office"
-      intro="Give facility, security, committee, staff, or builder. Only super admin can assign society admin."
+      title="People"
+      badge="Team"
+      intro="People on the team and which society role they hold."
     />
   );
 }

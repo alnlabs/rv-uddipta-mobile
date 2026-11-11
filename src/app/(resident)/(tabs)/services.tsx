@@ -71,8 +71,7 @@ export default function ServicesScreen() {
       {showVisitors ? (
         <>
           <SectionLabel title="Visitors" />
-          <MenuRow icon="people" title="Invite a visitor" detail="Create a QR pass for the gate" onPress={() => router.push("/(resident)/invite")} />
-          <MenuRow icon="gate" title="Visitor history" detail="Passes, approvals, and past visits" onPress={() => router.push("/(resident)/history")} />
+          <MenuRow icon="people" title="Visitors" detail="Invite, passes, and past visits" onPress={() => router.push("/(resident)/history")} />
         </>
       ) : null}
 

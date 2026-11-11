@@ -1,3 +1,4 @@
+import * as SecureStore from "expo-secure-store";
 import { indiaDay } from "@/lib/day";
 import { htmlToPlain } from "@/lib/html";
 import { supabase } from "@/lib/supabase";
@@ -110,22 +111,45 @@ export async function loadAccount(): Promise<Account> {
     : await supabase.from("person_roles").select("role").eq("user_id", user.id);
   const roleNames = [...new Set([role, ...(held ?? []).map((row) => String(row.role))])];
   const place = phonePlace(role, superAdmin);
+  const joinIntent = String(user.user_metadata?.joinIntent || "");
+  const { data: request } = await supabase
+    .from("registration_requests")
+    .select("status, flat_number, request_kind, intent_path, reject_reason")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const joinRequest = request
+    ? {
+        status: request.status as "pending" | "approved" | "rejected",
+        flatNumber: request.flat_number ? String(request.flat_number) : null,
+        kind: String(request.request_kind || "owner"),
+        path: String(request.intent_path || "home"),
+        reason: String(request.reject_reason || ""),
+      }
+    : null;
+  const joinPending = !superAdmin && role === "visitor" && joinRequest?.status === "pending";
+  const joinRejected = joinRequest?.status === "rejected";
+  const joinBrowse =
+    !superAdmin
+    && role === "visitor"
+    && !joinPending
+    && !joinRejected
+    && joinIntent === "browse";
+  const needsJoin =
+    !superAdmin && role === "visitor" && !joinPending && !joinBrowse;
+
   let claimNote: string | null = null;
-  if (!superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat) {
-    const { data: request } = await supabase
-      .from("registration_requests")
-      .select("status, flat_number")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (request?.status === "pending") {
-      claimNote = `Your claim for ${request.flat_number} is waiting for the office.`;
-    } else if (request?.status === "rejected") {
-      claimNote = `Your claim for ${request.flat_number} was not approved. You can send a new one.`;
-    } else {
-      claimNote = "No home is linked yet. Claim your flat so the office can approve you.";
-    }
+  if (joinPending) {
+    claimNote = joinRequest?.flatNumber
+      ? `Your request for ${joinRequest.flatNumber} is waiting for the office.`
+      : "Your access request is waiting for the office.";
+  } else if (joinRejected) {
+    claimNote = joinRequest?.reason || "Your request was not approved. You can send a new one.";
+  } else if (!superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat) {
+    claimNote = "No home is linked yet. Claim your flat so the office can approve you.";
+  } else if (needsJoin) {
+    claimNote = "Tell the office who you are so they can open the right access.";
   }
 
   return {
@@ -139,7 +163,11 @@ export async function loadAccount(): Promise<Account> {
     flatNumber: place === "home" ? flatNumber : null,
     wing: place === "home" ? wing : null,
     home: claimNote,
-    needsClaim: !superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat,
+    needsClaim: needsJoin || (!superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat),
+    needsJoin,
+    joinPending,
+    joinBrowse,
+    joinRequest,
     superAdmin,
   };
 }
@@ -499,7 +527,7 @@ export function notificationPath(kind: string, href: string) {
   if (value.includes("registration") || value.includes("approved") || value.includes("approval")) {
     return value.includes("waiting") || value.includes("join") || value.includes("claim")
       ? "/(resident)/approvals"
-      : "/(resident)/claim";
+      : "/(public)/join";
   }
   if (value.includes("account/requests") || value.includes("/account/requests")) {
     return "/(resident)/office-requests";
@@ -614,7 +642,6 @@ export async function loadGatePasses() {
       refused: [] as typeof rows,
       offline: false,
     };
-    const { default: SecureStore } = await import("expo-secure-store");
     await SecureStore.setItemAsync(
       "rv_gate_cache_v1",
       JSON.stringify({
@@ -627,7 +654,6 @@ export async function loadGatePasses() {
     ).catch(() => undefined);
     return result;
   } catch (error) {
-    const { default: SecureStore } = await import("expo-secure-store");
     const cached = await SecureStore.getItemAsync("rv_gate_cache_v1").catch(() => null);
     if (cached) {
       try {
@@ -657,7 +683,7 @@ export async function loadGatePasses() {
 export async function loadTasks() {
   const { data, error } = await supabase
     .from("work_orders")
-    .select("id, title, place, body, status, created_at")
+    .select("id, title, place, body, status, created_at, assignee_role, assignee_user_id, frequency")
     .order("created_at", { ascending: false })
     .limit(40);
   dbError(error, "Could not load tasks.");

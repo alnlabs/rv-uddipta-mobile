@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Image, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { CallButton } from "@/components/CallButton";
-import { Back, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadNeighbours, type NeighbourHome } from "@/lib/office";
 import { colors, fonts, ui } from "@/theme";
 
@@ -48,8 +48,6 @@ export default function SecurityDirectoryScreen() {
         onSubmit: () => { load(query).catch(() => undefined); },
       }}
     >
-      <Back />
-      <Text style={ui.eyebrow}>Gate</Text>
       <Text style={ui.body}>
         Call any home. Numbers stay hidden — your phone dials without showing the number here.
       </Text>

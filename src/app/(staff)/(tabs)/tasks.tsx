@@ -3,7 +3,7 @@ import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { loadTasks } from "@/lib/community";
-import { taskStatus, type Task } from "@/lib/tasks";
+import { taskFrequencyLabel, taskStatus, type Task } from "@/lib/tasks";
 import { ui } from "@/theme";
 
 export default function TasksScreen() {
@@ -28,14 +28,12 @@ export default function TasksScreen() {
   const open = tasks.filter((task) => task.status !== "done");
 
   return (
-    <Screen onRefresh={load} busy={!ready && !message}>
-      <Text style={ui.eyebrow}>Work</Text>
-      <Text style={ui.title}>My tasks</Text>
+    <Screen title="My tasks" showBack={false} onRefresh={load} busy={!ready && !message}>
       {message ? <Note text={message} /> : null}
       {ready && open.length === 0 ? <Text style={ui.body}>No open tasks.</Text> : null}
       {open.map((task) => (
         <Pressable key={task.id} onPress={() => router.push(`/(staff)/task/${task.id}`)} style={ui.card}>
-          <Text style={ui.label}>{taskStatus(task.status)}</Text>
+          <Text style={ui.label}>{taskStatus(task.status, task)} · {taskFrequencyLabel(task.frequency)}</Text>
           <Text style={ui.cardTitle}>{task.title}</Text>
           <Text style={ui.body}>{task.place || "Location is with the office"}</Text>
         </Pressable>

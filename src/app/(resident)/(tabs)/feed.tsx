@@ -89,8 +89,9 @@ export default function FeedTabScreen() {
       title="Feed"
       showBack={false}
       onRefresh={load}
-      action={canPost ? <TextButton label="Write a post"
-      onPress={() => router.push("/(resident)/post/new?kind=update")} /> : undefined}
+      action={canPost ? (
+        <TextButton label="Write a post" onPress={() => router.push("/(resident)/post/new?kind=update")} />
+      ) : undefined}
     >
       <Text style={ui.body}>Notices, neighbour posts, events, and polls in one place.</Text>
       <Chips options={filters} value={activeFilter} onChange={(value) => setFilter(value as Filter)} />

@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors, fonts, ui } from "@/theme";
 
@@ -60,13 +60,18 @@ export function Chips({
   options,
   value,
   onChange,
+  compact = false,
+  scroll = false,
 }: {
   options: readonly { value: string; label: string }[]
   value: string
   onChange: (value: string) => void
+  compact?: boolean
+  /** Keep chips on one horizontal row (saves vertical space). */
+  scroll?: boolean
 }) {
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+  const row = (
+    <View style={{ flexDirection: "row", flexWrap: scroll ? "nowrap" : "wrap", gap: compact ? 6 : 8 }}>
       {options.map((item) => {
         const active = item.value === value;
         return (
@@ -77,8 +82,8 @@ export function Chips({
             accessibilityLabel={item.label}
             onPress={() => onChange(item.value)}
             style={{
-              minHeight: 44,
-              paddingHorizontal: 14,
+              minHeight: compact ? 34 : 44,
+              paddingHorizontal: compact ? 12 : 14,
               borderRadius: 999,
               alignItems: "center",
               justifyContent: "center",
@@ -87,13 +92,26 @@ export function Chips({
               borderColor: active ? colors.button : "rgba(15, 23, 42, 0.12)",
             }}
           >
-            <Text style={{ color: active ? colors.onButton : colors.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>
+            <Text style={{ color: active ? colors.onButton : colors.ink, fontFamily: fonts.display, fontSize: compact ? 12 : 13, fontWeight: "600" }}>
               {item.label}
             </Text>
           </Pressable>
         );
       })}
     </View>
+  );
+
+  if (!scroll) return row;
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingRight: 8 }}
+    >
+      {row}
+    </ScrollView>
   );
 }
 
@@ -130,6 +148,42 @@ export function Empty({ title, detail }: { title: string; detail?: string }) {
 
 export function Panel({ children }: { children: ReactNode }) {
   return <View style={[ui.surface, { padding: 16, gap: 12 }]}>{children}</View>;
+}
+
+export function LinkRow({
+  title,
+  detail,
+  onPress,
+  icon = "chevron",
+}: {
+  title: string
+  detail?: string
+  onPress: () => void
+  icon?: IconName
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[ui.card, { flexDirection: "row", alignItems: "center", gap: 12 }]}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={ui.cardTitle}>{title}</Text>
+        {detail ? <Text style={ui.meta}>{detail}</Text> : null}
+      </View>
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: colors.brandSoft,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Icon name={icon} color={colors.gold} size={16} />
+      </View>
+    </Pressable>
+  );
 }
 
 export function HubCard({

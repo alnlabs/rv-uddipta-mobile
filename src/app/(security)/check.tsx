@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { CallButton } from "@/components/CallButton";
-import { Back, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { lookupPass, setGateStatus } from "@/lib/community";
 import { colors, fonts, ui } from "@/theme";
 
@@ -74,11 +74,11 @@ export default function CheckScreen() {
           : "Not verified";
 
   return (
-    <Screen busy={!ready && !message}
-        onRefresh={async () => { await load(); }}>
-      <Back />
-      <Text style={ui.eyebrow}>Gate</Text>
-      <Text style={ui.title}>{title}</Text>
+    <Screen
+      title={title}
+      busy={!ready && !message}
+      onRefresh={async () => { await load(); }}
+    >
       {ready && result && !result.found ? <Text style={ui.body}>No pass matches that code.</Text> : null}
       {result?.found ? (
         <View style={ui.card}>

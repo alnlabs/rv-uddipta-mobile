@@ -3,6 +3,7 @@ import { Alert, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Banner, Empty, Panel } from "@/components/Blocks";
 import { Screen } from "@/components/Screen";
+import { joinKindLabel } from "@/lib/join";
 import { decideApproval, loadApprovals, type ApprovalRequest } from "@/lib/office";
 import { colors, ui } from "@/theme";
 
@@ -60,7 +61,7 @@ export default function ApprovalsScreen() {
   }
 
   function askApprove(row: ApprovalRequest) {
-    Alert.alert("Approve this join request?", `${row.name} · ${row.home}`, [
+    Alert.alert("Approve this join request?", `${row.name} · ${row.home || joinKindLabel(row.kind)}`, [
       { text: "Cancel", style: "cancel" },
       { text: "Approve", onPress: () => act(row.id, "approve") },
     ]);
@@ -68,17 +69,19 @@ export default function ApprovalsScreen() {
 
   return (
     <Screen title="Approvals" onRefresh={load} busy={!ready && !message}>
-      <Text style={ui.body}>People waiting to join a flat. Approve to open their home, or reject with a short reason.</Text>
+      <Text style={ui.body}>People waiting for home or work access. Approve to open their place, or reject with a short reason.</Text>
       {message ? <Banner text={message} tone={tone} /> : null}
       {ready && waiting.length === 0 ? (
-        <Empty title="No one is waiting" detail="When someone asks to join a flat, they show up here." />
+        <Empty title="No one is waiting" detail="When someone asks to join, they show up here." />
       ) : null}
       {waiting.map((row) => {
         const busy = busyId === row.id;
+        const headline = row.home || joinKindLabel(row.kind);
         return (
           <Panel key={row.id}>
-            <Text style={ui.label}>{row.kind} · {row.home}</Text>
+            <Text style={ui.label}>{joinKindLabel(row.kind)} · {headline}</Text>
             <Text style={ui.cardTitle}>{row.name}</Text>
+            {row.whyNote ? <Text style={ui.body}>{row.whyNote}</Text> : null}
             {row.phone ? <Text style={ui.body}>{row.phone}</Text> : null}
             {row.email ? <Text style={ui.meta}>{row.email}</Text> : null}
             {rejectId === row.id ? (

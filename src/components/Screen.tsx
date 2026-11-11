@@ -183,10 +183,12 @@ function useGoBack() {
     if (root === "(security)") router.replace("/(security)/gate");
     else if (root === "(staff)") router.replace("/(staff)");
     else if (root === "(super)") router.replace("/(super)");
+    else if (root === "(public)") router.replace("/(public)");
     else router.replace("/(resident)");
   };
 }
 
+/** Sticky top bar for stack screens. Prefer Screen title=… for normal pages. */
 export function NavBar({
   title,
   action,
@@ -266,15 +268,6 @@ export function Back() {
   );
 }
 
-export function BrandRow() {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <Mark size={48} />
-      <Text style={ui.eyebrow}>RV Uddiipta</Text>
-    </View>
-  );
-}
-
 export function IconButton({
   icon,
   label,
@@ -325,40 +318,6 @@ export function IconButton({
         </View>
       ) : null}
     </Pressable>
-  );
-}
-
-export function Masthead({
-  title,
-  detail,
-  actions,
-  children,
-}: {
-  title: string
-  detail?: string
-  actions?: ReactNode
-  children?: ReactNode
-}) {
-  const insets = useSafeAreaInsets();
-  return (
-    <View
-      style={{
-        marginHorizontal: -20,
-        backgroundColor: colors.page,
-        paddingHorizontal: 20,
-        paddingTop: insets.top + 14,
-        paddingBottom: 8,
-        gap: 8,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <BrandRow />
-        {actions ? <View style={{ flexDirection: "row", gap: 8 }}>{actions}</View> : null}
-      </View>
-      <Text style={ui.title}>{title}</Text>
-      {detail ? <Text style={ui.body}>{detail}</Text> : null}
-      {children}
-    </View>
   );
 }
 

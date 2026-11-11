@@ -4,7 +4,7 @@ import { RolesAssign } from "@/components/RolesAssign";
 export default function SuperRolesScreen() {
   return (
     <RolesAssign
-      title="Office roles"
+      title="People"
       badge="Super admin"
       header={<OfficeRolesSetup />}
     />

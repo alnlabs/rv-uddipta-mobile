@@ -56,7 +56,7 @@ export function OfficeRolesSetup() {
       const result = await setOfficeRolesEnabled(next);
       setPicked(Array.isArray(result.roles) ? result.roles.map(String) : next);
       setTone("ok");
-      setMessage("Office roles saved. Admins will only see these when assigning people.");
+      setMessage("Society roles saved. Admins will only see these when assigning people.");
     } catch (error) {
       setTone("error");
       setMessage(error instanceof Error ? error.message : "Could not save.");
@@ -73,7 +73,7 @@ export function OfficeRolesSetup() {
         Roles this society uses
       </Text>
       <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
-        Turn on Security, Facility, Staff, and others. Admins onboard people into these roles after they sign in.
+        Turn on Security, Facility, Staff, and other society role types. Admins can create staff into these roles.
       </Text>
       {message ? <AdminBanner text={message} tone={tone} /> : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, minHeight: 44 }}>

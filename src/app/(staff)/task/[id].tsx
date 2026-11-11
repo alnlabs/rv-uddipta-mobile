@@ -2,9 +2,9 @@ import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { HtmlBody } from "@/components/HtmlText";
-import { Back, Note, Screen } from "@/components/Screen";
+import { Note, Screen } from "@/components/Screen";
 import { loadTasks, updateTask } from "@/lib/community";
-import { taskStatus, type Task } from "@/lib/tasks";
+import { taskFrequencyLabel, taskStatus, type Task } from "@/lib/tasks";
 import { colors, ui } from "@/theme";
 
 export default function TaskScreen() {
@@ -46,13 +46,14 @@ export default function TaskScreen() {
   }
 
   return (
-    <Screen onRefresh={load} busy={!ready && !message}>
-      <Back />
+    <Screen title={task?.title || "Task"} onRefresh={load} busy={!ready && !message}>
       {task ? (
         <>
-          <Text style={ui.label}>{taskStatus(task.status)}</Text>
-          <Text style={ui.title}>{task.title}</Text>
+          <Text style={ui.label}>{taskStatus(task.status, task)} · {taskFrequencyLabel(task.frequency)}</Text>
           <Text style={ui.body}>{task.place || "Location is with the office"}</Text>
+          {!task.assignee_user_id && task.assignee_role ? (
+            <Text style={ui.meta}>Open for {task.assignee_role}. Starting claims it for you.</Text>
+          ) : null}
           {task.body ? <HtmlBody html={task.body} /> : null}
           {task.status !== "done" ? (
             <View style={ui.card}>

@@ -18,28 +18,45 @@ export async function loadRegistration() {
     name: string
     request: null | {
       status: "pending" | "approved" | "rejected"
-      flatNumber: string
+      flatNumber: string | null
       kind: string
+      path?: string
+      whyNote?: string
       reason: string
     }
   }>("load_my_registration");
 }
 
 export async function submitRegistration(input: {
-  kind: "owner" | "family" | "tenant"
+  kind: string
   phone: string
   ownerName: string
-  flatNumber: string
+  flatNumber?: string
+  whyNote: string
 }) {
-  return rpc<{ ok: boolean; status: string; flatNumber: string; message: string }>(
-    "submit_registration",
-    {
-      kind: input.kind,
-      phone: input.phone,
-      owner_name: input.ownerName,
-      flat_number: input.flatNumber,
-    },
-  );
+  return rpc<{
+    ok: boolean
+    status: string
+    flatNumber: string | null
+    kind?: string
+    path?: string
+    message: string
+  }>("submit_registration", {
+    kind: input.kind,
+    phone: input.phone,
+    owner_name: input.ownerName,
+    flat_number: input.flatNumber || "",
+    why_note: input.whyNote,
+  });
+}
+
+export async function chooseBrowse() {
+  const { error } = await supabase.auth.updateUser({
+    data: { joinIntent: "browse", registrationStatus: "browse" },
+  });
+  dbError(error, "Could not open public pages.");
+  await supabase.auth.refreshSession();
+  return { ok: true as const, status: "browse" as const };
 }
 
 export type AmenityBooking = {
@@ -303,6 +320,8 @@ export type ApprovalRequest = {
   email: string
   phone: string
   kind: string
+  path?: string
+  whyNote?: string
   createdAt: string
 };
 
@@ -394,8 +413,28 @@ export type DeskJob = {
   status: string
   state: string
   assigneeId?: string | null
+  assigneeRole?: string | null
+  frequency?: string | null
+  frequencyLabel?: string | null
   who: string
 };
+
+export const TASK_ROLES = [
+  { value: "staff", label: "Staff" },
+  { value: "facility", label: "Facility" },
+  { value: "security", label: "Security" },
+] as const;
+
+export const TASK_FREQUENCIES = [
+  { value: "once", label: "Once" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+] as const;
+
+export function frequencyLabel(value: string | null | undefined) {
+  return TASK_FREQUENCIES.find((item) => item.value === value)?.label || "Once";
+}
 
 export type OfficeDeskSummary = {
   approvals: number
@@ -446,6 +485,51 @@ export async function loadJobs() {
   }>("list_jobs_desk");
 }
 
+export type AttendancePerson = {
+  id: string
+  name: string
+  role: string
+  roleLabel: string
+  onDuty: boolean
+  status: "present" | "absent" | null
+  markedAt?: string | null
+};
+
+export async function loadStaffAttendance(dutyOn?: string) {
+  const data = await rpc<{
+    dutyOn: string
+    canMark: boolean
+    people: AttendancePerson[]
+  }>("list_staff_attendance", dutyOn ? { duty_on: dutyOn } : {});
+  return {
+    dutyOn: String(data?.dutyOn || ""),
+    canMark: Boolean(data?.canMark),
+    people: Array.isArray(data?.people)
+      ? data.people.map((person) => ({
+        id: String(person.id),
+        name: String(person.name || "Staff"),
+        role: String(person.role || ""),
+        roleLabel: String(person.roleLabel || person.role || "Staff"),
+        onDuty: Boolean(person.onDuty),
+        status: person.status === "present" || person.status === "absent" ? person.status : null,
+        markedAt: person.markedAt ? String(person.markedAt) : null,
+      }))
+      : [],
+  };
+}
+
+export async function markStaffAttendance(input: {
+  personId: string
+  status: "present" | "absent"
+  dutyOn?: string
+}) {
+  return rpc<{ ok: boolean; message?: string; status?: string }>("mark_staff_attendance", {
+    person_id: input.personId,
+    status: input.status,
+    ...(input.dutyOn ? { duty_on: input.dutyOn } : {}),
+  });
+}
+
 export async function setOnDuty(input: { personId: string; onDuty: boolean }) {
   return rpc<{ ok: boolean; message?: string }>("set_on_duty", {
     person_id: input.personId,
@@ -453,11 +537,39 @@ export async function setOnDuty(input: { personId: string; onDuty: boolean }) {
   });
 }
 
-export async function openJob(input: { title: string; place?: string; body?: string }) {
+export async function openJob(input: {
+  title: string
+  place?: string
+  body?: string
+  role?: string | null
+  frequency?: string | null
+}) {
   return rpc<{ ok: boolean; message?: string }>("open_job", {
     title: input.title,
     place: input.place || "",
     body: input.body || "",
+    target_role: input.role || null,
+    frequency: input.frequency || "once",
+  });
+}
+
+export async function updateJob(input: {
+  jobId: number
+  title?: string
+  place?: string
+  body?: string
+  role?: string | null
+  frequency?: string | null
+  clearPerson?: boolean
+}) {
+  return rpc<{ ok: boolean; message?: string }>("update_job", {
+    job_id: input.jobId,
+    title: input.title ?? null,
+    place: input.place ?? null,
+    body: input.body ?? null,
+    target_role: input.role === undefined ? null : input.role,
+    clear_person: Boolean(input.clearPerson),
+    frequency: input.frequency ?? null,
   });
 }
 
@@ -465,11 +577,13 @@ export async function assignJob(input: {
   jobId: number
   assignee?: string
   status?: "open" | "in_progress" | "done"
+  role?: string | null
 }) {
   return rpc<{ ok: boolean; message?: string }>("assign_job", {
     job_id: input.jobId,
     assignee: input.assignee ?? null,
     next_status: input.status ?? null,
+    target_role: input.role || null,
   });
 }
 

@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { loadGatePasses } from "@/lib/community";
-import { colors, ui } from "@/theme";
+import { ui } from "@/theme";
 
 const GROUPS = [
   ["waiting", "At the gate"],
@@ -31,21 +31,8 @@ export default function GateVisitorsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <Screen onRefresh={load} busy={!groups && !message}>
-      <Text style={ui.eyebrow}>Gate</Text>
-      <Text style={ui.title}>Visitors</Text>
+    <Screen title="Visitors" showBack={false} onRefresh={load} busy={!groups && !message}>
       <Text style={ui.body}>Guests and delivery people handled on this phone.</Text>
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
-        <Pressable onPress={() => router.push("/(security)/scan")} style={[ui.button, { flex: 1 }]}>
-          <Text style={ui.buttonText}>Scan QR</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push("/(security)/walk-in")}
-          style={[ui.button, { flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.button }]}
-        >
-          <Text style={[ui.buttonText, { color: colors.button }]}>No pass</Text>
-        </Pressable>
-      </View>
       {message ? <Note text={message} /> : null}
       {GROUPS.map(([key, title]) => {
         const rows = groups?.[key] ?? [];

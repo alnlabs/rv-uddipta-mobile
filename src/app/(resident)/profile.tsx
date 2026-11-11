@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
-import { Image, Linking, Pressable, Text, View } from "react-native";
+import { Image, Linking, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Panel, SectionLabel } from "@/components/Blocks";
 import { MenuRow, Note, Screen, SignOut } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
-import { loadFeatures, featureOn } from "@/lib/features";
+import { loadFeatures } from "@/lib/features";
 import { loadNeighbour, type NeighbourHome } from "@/lib/office";
 import { type Account } from "@/lib/place";
 import { siteUrl } from "@/lib/site";
@@ -93,8 +93,6 @@ export default function ProfileScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const superAdmin = Boolean(account?.superAdmin);
-  const isAdmin = !superAdmin && account?.role === "admin";
-  const showCommittee = !superAdmin && (isAdmin || account?.role === "committee");
   const family = home?.family ?? [];
   const renters = home?.renters ?? [];
   const people = home?.people ?? [];
@@ -109,14 +107,6 @@ export default function ProfileScreen() {
             {email ? <Text style={ui.body}>{email}</Text> : null}
             <Text style={ui.meta}>{account.roleLabel}</Text>
             {account.home ? <Note text={account.home} /> : null}
-            {superAdmin ? (
-              <Note text="Super admin has its own screens — not the resident home." />
-            ) : null}
-            {!superAdmin && account.needsClaim ? (
-              <Pressable onPress={() => router.push("/(resident)/claim")} style={ui.button}>
-                <Text style={ui.buttonText}>Claim my flat</Text>
-              </Pressable>
-            ) : null}
           </Panel>
 
           {!superAdmin && (account.flatNumber || home) ? (
@@ -187,34 +177,21 @@ export default function ProfileScreen() {
             </>
           ) : null}
 
-          {superAdmin ? (
-            <>
-              <SectionLabel title="Platform" />
-              <MenuRow
-                icon="admin"
-                title="Super admin"
-                detail="Office roles and apartment overview"
-                onPress={() => router.push("/(super)")}
-              />
-            </>
-          ) : null}
-
           <SectionLabel title="Account" />
-          {!superAdmin ? (
-            <Text style={ui.body}>Alerts stay in Inbox. Tap a push notification to open the right screen.</Text>
-          ) : null}
+          <Text style={ui.body}>Alerts stay in Inbox. Tap a push notification to open the right screen.</Text>
           {!features ? <Note text="Could not check which features are open." /> : null}
-          {showCommittee && featureOn(features, "committee") ? (
-            <MenuRow icon="admin" title="Committee" detail="Open decisions" onPress={() => router.push("/(resident)/committee")} />
-          ) : null}
-          {!superAdmin ? (
-            <MenuRow
-              icon="model"
-              title="Floor plans"
-              detail="Opens the existing plans on the website. They are not redrawn here."
-              onPress={() => { Linking.openURL(`${siteUrl}/community?view=3d`).catch(() => undefined); }}
-            />
-          ) : null}
+          <MenuRow
+            icon="settings"
+            title="Settings"
+            detail="Home layout and quick actions"
+            onPress={() => router.push("/(resident)/settings")}
+          />
+          <MenuRow
+            icon="model"
+            title="Floor plans"
+            detail="Opens the existing plans on the website. They are not redrawn here."
+            onPress={() => { Linking.openURL(`${siteUrl}/community?view=3d`).catch(() => undefined); }}
+          />
           {message ? <Note text={message} /> : null}
           <SignOut />
         </>

@@ -8,6 +8,7 @@ import {
   AdminSheet,
 } from "@/components/AdminUi";
 import { Note } from "@/components/Screen";
+import { joinKindLabel } from "@/lib/join";
 import { loadApprovals, type ApprovalRequest } from "@/lib/office";
 
 export default function SuperApprovalsScreen() {
@@ -32,7 +33,7 @@ export default function SuperApprovalsScreen() {
 
   return (
     <AdminScreen title="Approvals" badge="Overview" onRefresh={load} busy={!ready && !message}>
-      <AdminIntro text="Join requests for flats. Approving is handled by society admin." />
+      <AdminIntro text="Home and work join requests. Approving is handled by society admin." />
       {ready && waiting.length === 0 ? (
         <AdminEmpty title="No one is waiting" detail="Join requests will show here." />
       ) : null}
@@ -41,9 +42,9 @@ export default function SuperApprovalsScreen() {
           {waiting.map((row, index) => (
             <AdminRecord
               key={row.id}
-              kicker={`${row.kind} · ${row.home}`}
+              kicker={`${joinKindLabel(row.kind)} · ${row.home || "Work"}`}
               title={row.name}
-              lines={[row.phone, row.email].filter(Boolean)}
+              lines={[row.whyNote, row.phone, row.email].filter((line): line is string => Boolean(line))}
               last={index === waiting.length - 1}
             />
           ))}

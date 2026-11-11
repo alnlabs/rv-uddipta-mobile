@@ -1,3 +1,5 @@
+import { normalizePhone, STAFF_EMAIL_DOMAIN } from "@/lib/phone";
+import { siteUrl } from "@/lib/site";
 import { supabase } from "@/lib/supabase";
 
 export type OfficeRoleOption = { value: string; label: string };
@@ -6,6 +8,7 @@ export type RolePerson = {
   userId: string
   name: string
   email: string
+  phone: string | null
   role: string
   roleLabel: string
   flatNumber: string | null
@@ -23,6 +26,8 @@ export type RolesDesk = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const SOCIETY_ROLES = new Set(["admin", "builder", "committee", "facility", "staff", "security"]);
+const HOME_ROLES = new Set(["owner", "co_owner", "tenant"]);
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -49,11 +54,20 @@ function pick(row: Record<string, unknown>, ...keys: string[]) {
   return null;
 }
 
-/** Drop UUID / phone-id / long-digit junk used as display names. */
+/** Phone from synthetic staff login email (phone@owners.rvuddipta.app). */
+function phoneFromStaffEmail(email: string) {
+  const value = email.trim().toLowerCase();
+  const suffix = `@${STAFF_EMAIL_DOMAIN.toLowerCase()}`;
+  if (!value.endsWith(suffix)) return null;
+  return normalizePhone(value.slice(0, -suffix.length));
+}
+
+/** Drop UUID / long-digit junk used as display names — keep real 10-digit phones. */
 function junkToken(value: string) {
   const v = value.trim();
   if (!v) return true;
   if (UUID_RE.test(v)) return true;
+  if (normalizePhone(v)) return false;
   if (/^\d+$/.test(v)) return true;
   if (/^[0-9a-f]{16,}$/i.test(v)) return true;
   if (/^\+?\d[\d\s-]{6,}$/.test(v)) return true;
@@ -68,16 +82,18 @@ function titleCaseLocal(local: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function niceName(raw: string, email: string) {
+function niceName(raw: string, email: string, phone: string | null) {
   const value = raw.trim();
   if (value && !junkToken(value)) return value;
+  if (phone && (!value || normalizePhone(value) === phone || junkToken(value))) return phone;
   const local = email.split("@")[0]?.trim() || "";
   if (local && !junkToken(local)) return titleCaseLocal(local);
-  return "Signed-in person";
+  return phone || "Signed-in person";
 }
 
-/** Only show a real-looking email under the name. */
-function niceEmail(email: string) {
+/** Real email, or blank when the login is a synthetic staff phone email. */
+function niceEmail(email: string, phone: string | null) {
+  if (phone) return "";
   const value = email.trim();
   if (!EMAIL_RE.test(value)) return "";
   const local = value.split("@")[0] || "";
@@ -90,15 +106,17 @@ function asPerson(row: Record<string, unknown>): RolePerson | null {
   if (!userId) return null;
 
   const rawEmail = String(pick(row, "email") || "").trim();
-  const email = niceEmail(rawEmail);
+  const phoneRaw = pick(row, "phone");
+  const phone = normalizePhone(String(phoneRaw || "")) || phoneFromStaffEmail(rawEmail);
+  const email = niceEmail(rawEmail, phone);
   const role = String(pick(row, "role") || "visitor").trim() || "visitor";
   const flatNumberRaw = pick(row, "flat_number", "flatNumber");
   const flatNumber = flatNumberRaw ? String(flatNumberRaw) : null;
   const heldRaw = pick(row, "held_roles", "heldRoles");
   const heldRoles = Array.isArray(heldRaw) ? heldRaw.map(String) : [];
-  const office = Boolean(pick(row, "office") ?? heldRoles.some((item) => (
-    ["admin", "builder", "committee", "facility", "staff", "security"].includes(item)
-  )));
+  const hasSocietyRole = SOCIETY_ROLES.has(role) || heldRoles.some((item) => SOCIETY_ROLES.has(item));
+  const officeFlag = pick(row, "office");
+  const office = (officeFlag == null ? false : Boolean(officeFlag)) || hasSocietyRole;
 
   let roleLabel = String(pick(row, "role_label", "roleLabel") || "").trim();
   if (!roleLabel || roleLabel.toLowerCase() === "visitor" || junkToken(roleLabel)) {
@@ -106,9 +124,20 @@ function asPerson(row: Record<string, unknown>): RolePerson | null {
     else roleLabel = ROLE_LABELS[role] || "Signed in";
   }
 
-  const name = niceName(String(pick(row, "name", "display_name", "displayName") || ""), rawEmail);
-  // Skip empty auth shells with no usable identity.
-  if (name === "Signed-in person" && !email && !flatNumber && !office && role === "visitor") {
+  let name = niceName(String(pick(row, "name", "display_name", "displayName") || ""), rawEmail, phone);
+  if (hasSocietyRole && (name === "Signed-in person" || junkToken(name))) {
+    name = phone
+      ? `${ROLE_LABELS[role] || roleLabel || "Staff"} ${phone.slice(-4)}`
+      : (ROLE_LABELS[role] || roleLabel || "Staff");
+  }
+  const homeHeld = heldRoles.some((item) => HOME_ROLES.has(item)) || HOME_ROLES.has(role);
+
+  // Keep society-role people always. Drop anonymous visitors without a real identity.
+  if (hasSocietyRole || office) {
+    // always keep
+  } else if (!homeHeld && !flatNumber) {
+    if (!email || name === "Signed-in person" || junkToken(name)) return null;
+  } else if (name === "Signed-in person" && !email && !phone) {
     return null;
   }
 
@@ -116,18 +145,16 @@ function asPerson(row: Record<string, unknown>): RolePerson | null {
     userId,
     name,
     email,
+    phone,
     role,
     roleLabel,
     flatNumber,
-    office,
+    office: office || hasSocietyRole,
     heldRoles,
   };
 }
 
-export async function loadRolesDesk(): Promise<RolesDesk> {
-  const { data, error } = await supabase.rpc("list_office_people");
-  dbError(error, "Could not load people.");
-  const payload = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+function deskFromPayload(payload: Record<string, unknown>): RolesDesk {
   const rolesRaw = payload.roles;
   const peopleRaw = payload.people;
   const roles = Array.isArray(rolesRaw)
@@ -169,11 +196,39 @@ export async function loadRolesDesk(): Promise<RolesDesk> {
   };
 }
 
+/** Prefer portal admin API (same path as create). Fall back to RPC if the site is down. */
+export async function loadRolesDesk(): Promise<RolesDesk> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (token) {
+    try {
+      const response = await fetch(`${siteUrl}/api/mobile/office-users`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+      if (response.ok) return deskFromPayload(payload);
+      // Deployed API auth/business errors — don't hide behind RPC.
+      if (response.status === 401 || response.status === 403 || response.status === 400) {
+        throw new Error(String(payload.message || "Could not load people."));
+      }
+    } catch (error) {
+      if (error instanceof Error && !/network|fetch|failed to fetch/i.test(error.message)) {
+        throw error;
+      }
+    }
+  }
+
+  const { data, error } = await supabase.rpc("list_office_people");
+  dbError(error, "Could not load people.");
+  return deskFromPayload((data && typeof data === "object" ? data : {}) as Record<string, unknown>);
+}
+
 export async function setOfficeRolesEnabled(roles: string[]) {
   const { data, error } = await supabase.rpc("set_office_roles_enabled", {
     next_roles: roles,
   });
-  dbError(error, "Could not save office roles.");
+  dbError(error, "Could not save society roles.");
   return data as { ok: boolean; roles: string[] };
 }
 
@@ -197,4 +252,50 @@ export async function clearOfficeRole(userId: string) {
   });
   dbError(error, "Could not remove that role.");
   return data as { ok: boolean; message: string };
+}
+
+/** Create staff with phone + PIN (email optional) via the portal admin API. */
+export async function createOfficeUser(input: {
+  phone: string
+  pin: string
+  role: string
+  displayName?: string
+  email?: string
+}) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Sign in first.");
+
+  const response = await fetch(`${siteUrl}/api/mobile/office-users`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      phone: input.phone,
+      pin: input.pin,
+      email: input.email || "",
+      role: input.role,
+      displayName: input.displayName || "",
+    }),
+  });
+  const payload = await response.json().catch(() => ({})) as {
+    message?: string
+    ok?: boolean
+    roleLabel?: string
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "Could not create that account.");
+  }
+  return payload as {
+    ok: boolean
+    created: boolean
+    userId: string
+    phone: string
+    email: string | null
+    role: string
+    roleLabel: string
+    message: string
+  };
 }

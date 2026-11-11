@@ -5,7 +5,6 @@ import {
   AdminBanner,
   AdminButton,
   AdminEmpty,
-  AdminField,
   AdminScreen,
   AdminSheet,
   ops,
@@ -15,6 +14,7 @@ import { Loading } from "@/components/Screen";
 import {
   assignOfficeRole,
   clearOfficeRole,
+  createOfficeUser,
   loadRolesDesk,
   type OfficeRoleOption,
   type RolePerson,
@@ -43,11 +43,10 @@ function roleLabel(value: string, roles: OfficeRoleOption[]) {
   return HELD_LABELS[value] || value;
 }
 
-function officeRoleOf(person: RolePerson, roles: OfficeRoleOption[]) {
-  if (OFFICE_ROLES.has(person.role) && roles.some((item) => item.value === person.role)) {
-    return person.role;
-  }
-  return (person.heldRoles || []).find((item) => roles.some((option) => option.value === item)) || null;
+/** Held office role for display — not limited to assignable chips (admin is hidden from society admins). */
+function officeRoleOf(person: RolePerson) {
+  if (OFFICE_ROLES.has(person.role)) return person.role;
+  return (person.heldRoles || []).find((item) => OFFICE_ROLES.has(item)) || null;
 }
 
 function homeRoleOf(person: RolePerson) {
@@ -76,8 +75,8 @@ function Pill({
 }
 
 export function RolesAssign({
-  title = "Team roles",
-  badge = "Office",
+  title = "People",
+  badge = "Team",
   header,
 }: {
   title?: string
@@ -92,11 +91,18 @@ export function RolesAssign({
   const [role, setRole] = useState("facility");
   const [displayName, setDisplayName] = useState("");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "office" | "outside" | "homes">("all");
+  const [filter, setFilter] = useState<"all" | "office" | "security" | "staff" | "facility" | "homes">("office");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createPhone, setCreatePhone] = useState("");
+  const [createPin, setCreatePin] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createName, setCreateName] = useState("");
+  const [createRole, setCreateRole] = useState("security");
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState<"error" | "ok">("error");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -109,8 +115,12 @@ export function RolesAssign({
           ? current
           : (desk.roles[0]?.value || "facility")
       ));
-      setSelectedId((current) => (
-        current && desk.people.some((person) => person.userId === current) ? current : null
+      setCreateRole((current) => (
+        desk.roles.some((item) => item.value === current)
+          ? current
+          : (desk.roles.find((item) => item.value === "security")?.value
+            || desk.roles[0]?.value
+            || "security")
       ));
       setMessage("");
     } catch (error) {
@@ -127,10 +137,13 @@ export function RolesAssign({
     const q = query.trim().toLowerCase();
     return people.filter((person) => {
       if (filter === "office" && !person.office) return false;
-      if (filter === "outside" && person.flatNumber) return false;
+      if (filter === "security" || filter === "staff" || filter === "facility") {
+        const desk = officeRoleOf(person);
+        if (desk !== filter && !(person.heldRoles || []).includes(filter)) return false;
+      }
       if (filter === "homes" && !person.flatNumber) return false;
       if (!q) return true;
-      return [person.name, person.email, person.roleLabel, person.flatNumber || "", ...(person.heldRoles || [])]
+      return [person.name, person.email, person.phone || "", person.roleLabel, person.flatNumber || "", ...(person.heldRoles || [])]
         .join(" ")
         .toLowerCase()
         .includes(q);
@@ -138,7 +151,7 @@ export function RolesAssign({
   }, [people, query, filter]);
 
   const selected = selectedId ? people.find((person) => person.userId === selectedId) || null : null;
-  const currentOffice = selected ? officeRoleOf(selected, roles) : null;
+  const currentOffice = selected ? officeRoleOf(selected) : null;
   const alreadyAssigned = Boolean(currentOffice);
   const sameRole = Boolean(currentOffice && currentOffice === role);
   const canRemove = Boolean(
@@ -178,7 +191,7 @@ export function RolesAssign({
     try {
       const result = await clearOfficeRole(selected.userId);
       setTone("ok");
-      setMessage(result.message || "Office role removed.");
+      setMessage(result.message || "Society role removed.");
       setSelectedId(null);
       setDisplayName("");
       await load();
@@ -190,48 +203,212 @@ export function RolesAssign({
     }
   }
 
+  async function create() {
+    if (saving) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const result = await createOfficeUser({
+        phone: createPhone,
+        pin: createPin,
+        email: createEmail,
+        role: createRole,
+        displayName: createName,
+      });
+      const createdName = createName.trim() || createPhone.trim();
+      const createdRole = result.role || createRole;
+      setTone("ok");
+      setMessage(result.message || "Staff account ready.");
+      setCreatePhone("");
+      setCreatePin("");
+      setCreateEmail("");
+      setCreateName("");
+      setCreateOpen(false);
+      const roleFilter = (["security", "staff", "facility"].includes(createdRole)
+        ? createdRole
+        : "office") as "office" | "security" | "staff" | "facility";
+      setFilter(roleFilter);
+      setQuery("");
+      setSearchOpen(false);
+      const createdPerson = result.userId ? {
+        userId: result.userId,
+        name: createdName || result.roleLabel || result.phone || "Team member",
+        email: "",
+        phone: result.phone || null,
+        role: createdRole,
+        roleLabel: result.roleLabel || roleLabel(createdRole, roles),
+        flatNumber: null as string | null,
+        office: true,
+        heldRoles: [createdRole],
+      } : null;
+      if (createdPerson) {
+        setPeople((current) => (
+          current.some((person) => person.userId === createdPerson.userId)
+            ? current
+            : [createdPerson, ...current]
+        ));
+        setSelectedId(createdPerson.userId);
+        setDisplayName(createdPerson.name);
+        setRole(createdRole);
+      }
+      await load();
+      if (createdPerson) {
+        setPeople((current) => (
+          current.some((person) => person.userId === createdPerson.userId)
+            ? current
+            : [createdPerson, ...current]
+        ));
+        setSelectedId(createdPerson.userId);
+        setTone("ok");
+        setMessage(result.message || "Staff account ready.");
+      }
+    } catch (error) {
+      setTone("error");
+      setMessage(error instanceof Error ? error.message : "Could not create that account.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function openPerson(person: RolePerson) {
     if (selectedId === person.userId) {
       setSelectedId(null);
       return;
     }
-    const current = officeRoleOf(person, roles);
+    const current = officeRoleOf(person);
     setSelectedId(person.userId);
     setRole(current || roles[0]?.value || "facility");
     setDisplayName(person.name);
     setMessage("");
   }
 
+  const fieldStyle = {
+    backgroundColor: ops.page,
+    borderWidth: 1,
+    borderColor: ops.line,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: ops.ink,
+  } as const;
+
   return (
-    <AdminScreen title={title} badge={badge} onRefresh={load} busy={!ready && !message}>
-      {header}
-      <AdminField
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Name, email, or home"
-      />
-      <View style={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}>
-        <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
-          Outside staff sign in with Google first. Then assign Security, Facility, Staff, or other roles this society uses.
-        </Text>
-        <Chips
-          options={[
-            { value: "all", label: "All" },
-            { value: "outside", label: "Outside" },
-            { value: "office", label: "Office" },
-            { value: "homes", label: "Homes" },
-          ]}
-          value={filter}
-          onChange={(value) => setFilter(value as "all" | "office" | "outside" | "homes")}
+    <AdminScreen
+      title={title}
+      badge={badge}
+      onRefresh={load}
+      busy={!ready && !message}
+      search={{
+        open: searchOpen,
+        value: query,
+        placeholder: "Name, phone, email, or home",
+        onOpen: () => setSearchOpen(true),
+        onClose: () => setSearchOpen(false),
+        onChange: setQuery,
+        onSubmit: () => setSearchOpen(false),
+      }}
+      action={(
+        <AdminButton
+          compact
+          label={createOpen ? "Close" : "Create"}
+          secondary={createOpen}
+          onPress={() => setCreateOpen((open) => !open)}
         />
-      </View>
+      )}
+      toolbar={(
+        <View style={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Chips
+                compact
+                scroll
+                options={[
+                  { value: "office", label: "With role" },
+                  { value: "security", label: "Security" },
+                  { value: "staff", label: "Staff" },
+                  { value: "facility", label: "Facility" },
+                  { value: "homes", label: "Homes" },
+                  { value: "all", label: "All" },
+                ]}
+                value={filter}
+                onChange={(value) => setFilter(value as "all" | "office" | "security" | "staff" | "facility" | "homes")}
+              />
+            </View>
+          </View>
+          {createOpen ? (
+            <View style={{
+              backgroundColor: ops.sheet,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: ops.line,
+              padding: 12,
+              gap: 8,
+            }}
+            >
+              <Chips
+                compact
+                scroll
+                options={roles.map((item) => ({
+                  value: item.value,
+                  label: item.value === "facility" ? "Facility" : item.label,
+                }))}
+                value={createRole}
+                onChange={setCreateRole}
+              />
+              <TextInput
+                value={createPhone}
+                onChangeText={setCreatePhone}
+                keyboardType="phone-pad"
+                placeholder="Phone"
+                placeholderTextColor="#94a3b8"
+                style={fieldStyle}
+              />
+              <TextInput
+                value={createPin}
+                onChangeText={setCreatePin}
+                keyboardType="number-pad"
+                secureTextEntry
+                placeholder="PIN (4–6 digits)"
+                placeholderTextColor="#94a3b8"
+                maxLength={6}
+                style={fieldStyle}
+              />
+              <TextInput
+                value={createName}
+                onChangeText={setCreateName}
+                placeholder="Name (optional)"
+                placeholderTextColor="#94a3b8"
+                style={fieldStyle}
+              />
+              <TextInput
+                value={createEmail}
+                onChangeText={setCreateEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="Email (optional)"
+                placeholderTextColor="#94a3b8"
+                style={fieldStyle}
+              />
+              <AdminButton
+                label={saving ? "Creating…" : `Create ${roleLabel(createRole, roles)}`}
+                disabled={saving || !createPhone.trim() || createPin.replace(/\D/g, "").length < 4}
+                onPress={() => { create().catch(() => undefined); }}
+              />
+            </View>
+          ) : null}
+        </View>
+      )}
+    >
+      {header}
       {message ? <AdminBanner text={message} tone={tone} /> : null}
       {ready && visible.length === 0 ? <AdminEmpty title="No matching people" /> : null}
 
       {visible.length ? (
         <AdminSheet>
           {visible.map((person, index) => {
-            const office = officeRoleOf(person, roles);
+            const office = officeRoleOf(person);
             const home = homeRoleOf(person);
             const open = selectedId === person.userId;
             const last = index === visible.length - 1 && !open;
@@ -273,19 +450,15 @@ export function RolesAssign({
                     <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 15, fontWeight: "600" }} numberOfLines={1}>
                       {person.name}
                     </Text>
-                    {person.email || person.roleLabel ? (
+                    {person.phone || person.email || person.roleLabel ? (
                       <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 12 }} numberOfLines={1}>
-                        {person.email || person.roleLabel}
+                        {person.phone || person.email || person.roleLabel}
                       </Text>
                     ) : null}
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
                       {person.flatNumber ? <Pill label={`Home ${person.flatNumber}`} tone="home" /> : null}
                       {home ? <Pill label={HELD_LABELS[home] || home} tone="home" /> : null}
-                      {office ? (
-                        <Pill label={roleLabel(office, roles)} tone="office" />
-                      ) : (
-                        <Pill label="No office role" />
-                      )}
+                      {office ? <Pill label={roleLabel(office, roles)} tone="office" /> : null}
                     </View>
                   </View>
 
@@ -307,6 +480,8 @@ export function RolesAssign({
                 {open ? (
                   <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 10 }}>
                     <Chips
+                      compact
+                      scroll
                       options={roles.map((item) => ({
                         value: item.value,
                         label: item.value === "facility" ? "Facility" : item.label,

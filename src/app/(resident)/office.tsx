@@ -95,7 +95,7 @@ export default function OfficeDeskScreen() {
 
       if (!admin && !facility) {
         setSummary(null);
-        setMessage("No office role on this account.");
+        setMessage("No society role on this account.");
         return;
       }
 
@@ -132,21 +132,28 @@ export default function OfficeDeskScreen() {
       show: isFacility && featureOn(features, "amenities"),
     },
     {
-      label: "Jobs",
+      label: "Tasks",
       value: summary ? countLabel(summary.openJobs) : "—",
       href: "/(resident)/jobs",
-      show: isFacility && featureOn(features, "maintenance"),
+      show: (isAdmin || isFacility) && featureOn(features, "maintenance"),
     },
   ].filter((item) => item.show).slice(0, 4);
 
   // Word actions stay as a list — not the digit grid.
   const actions = [
     {
-      title: "Team roles",
-      detail: "Facility, security, committee, staff, builder",
+      title: "People",
+      detail: "Who holds Security, Staff, Facility, and other society roles",
       value: "Edit",
       href: "/(resident)/roles",
       show: isAdmin,
+    },
+    {
+      title: "Attendance",
+      detail: "Staff & facility for today (Security marks; not listed)",
+      value: "View",
+      href: "/(resident)/attendance",
+      show: isAdmin || isFacility,
     },
     {
       title: "Publish notice",
@@ -155,17 +162,10 @@ export default function OfficeDeskScreen() {
       href: "/(resident)/publish-notice",
       show: isAdmin && featureOn(features, "announcements"),
     },
-    {
-      title: "Gate",
-      detail: "Visitors and deliveries",
-      value: "Open",
-      href: "/(security)/gate",
-      show: isAdmin,
-    },
   ].filter((item) => item.show);
 
   return (
-    <AdminScreen title="Admin" badge="Society office" showBack={false} onRefresh={load} busy={!ready && !message}>
+    <AdminScreen title="Admin" badge="Society" showBack={false} onRefresh={load} busy={!ready && !message}>
       {message ? <AdminBanner text={message} /> : null}
 
       {stats.length ? (

@@ -119,8 +119,8 @@ export default function HomeScreen() {
         <Text style={ui.heading}>{home?.greeting || "Home"}</Text>
         {home?.home ? <Note text={home.home} /> : null}
         {home?.needsClaim ? (
-          <Pressable onPress={() => router.push("/(resident)/claim")} style={ui.button}>
-            <Text style={ui.buttonText}>Claim my flat</Text>
+          <Pressable onPress={() => router.push("/(public)/join")} style={ui.button}>
+            <Text style={ui.buttonText}>Request access</Text>
           </Pressable>
         ) : null}
         {visitors.map((pass) => (

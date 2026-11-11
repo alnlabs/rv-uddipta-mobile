@@ -16,6 +16,7 @@ function detailLine(account: Account | null) {
   return parts.filter(Boolean).join(" · ");
 }
 
+/** Home-tab only brand bar. Other screens use Screen title= NavBar. */
 export function ResidentBar() {
   const router = useRouter();
   const { session } = useSession();

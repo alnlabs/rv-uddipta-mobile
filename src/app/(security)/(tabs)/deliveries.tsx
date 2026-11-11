@@ -1,12 +1,11 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { loadDeliveries, recordDelivery } from "@/lib/community";
 import { colors, ui } from "@/theme";
 
 export default function DeliveriesScreen() {
-  const router = useRouter();
   const [home, setHome] = useState("");
   const [label, setLabel] = useState("");
   const [rows, setRows] = useState<Awaited<ReturnType<typeof loadDeliveries>>>([]);
@@ -45,23 +44,8 @@ export default function DeliveriesScreen() {
   }
 
   return (
-    <Screen onRefresh={load} busy={!ready && !message}>
-      <Text style={ui.eyebrow}>Gate</Text>
-      <Text style={ui.title}>Deliveries</Text>
-      <Text style={ui.body}>Use the phone for delivery people at the gate. Leave parcels here only when nobody is going up.</Text>
-
-      <Text style={ui.label}>Delivery person</Text>
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Pressable onPress={() => router.push("/(security)/scan")} style={[ui.button, { flex: 1 }]}>
-          <Text style={ui.buttonText}>Scan QR</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push("/(security)/walk-in?purpose=Delivery")}
-          style={[ui.button, { flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.button }]}
-        >
-          <Text style={[ui.buttonText, { color: colors.button }]}>No pass</Text>
-        </Pressable>
-      </View>
+    <Screen title="Deliveries" showBack={false} onRefresh={load} busy={!ready && !message}>
+      <Text style={ui.body}>Leave parcels here only when nobody is going up. Use Gate for a delivery person with or without a pass.</Text>
 
       <Text style={ui.label}>Parcel left at gate</Text>
       <View style={ui.card}>

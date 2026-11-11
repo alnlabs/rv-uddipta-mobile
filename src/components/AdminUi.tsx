@@ -40,7 +40,7 @@ function useOpsBack() {
       return;
     }
     if (segments[0] === "(super)") router.replace("/(super)");
-    else router.replace("/(resident)/office");
+    else router.replace("/(resident)/(tabs)/admin");
   };
 }
 
@@ -48,6 +48,7 @@ export function AdminScreen({
   title,
   badge = "Admin",
   children,
+  toolbar,
   onRefresh,
   refreshing,
   showBack = true,
@@ -58,6 +59,8 @@ export function AdminScreen({
   title: string
   badge?: string
   children: ReactNode
+  /** Fixed strip under the header — keeps list vertical space free. */
+  toolbar?: ReactNode
   onRefresh?: () => Promise<void>
   refreshing?: boolean
   showBack?: boolean
@@ -79,7 +82,20 @@ export function AdminScreen({
 
   return (
     <View style={{ flex: 1, backgroundColor: ops.page }}>
-      <View style={{ backgroundColor: ops.header, paddingTop: insets.top }}>
+      <View
+        style={{
+          backgroundColor: ops.header,
+          paddingTop: insets.top,
+          zIndex: 4,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: "rgba(248,250,252,0.18)",
+          shadowColor: "#020617",
+          shadowOpacity: 0.35,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 10,
+        }}
+      >
         <View style={{ minHeight: 56, flexDirection: "row", alignItems: "center", paddingLeft: showBack && !searching ? 4 : 16, paddingRight: 12, gap: 6 }}>
           {showBack && !searching ? (
             <Pressable
@@ -134,10 +150,20 @@ export function AdminScreen({
         </View>
       </View>
 
+      {toolbar ? (
+        <View style={{ backgroundColor: ops.page, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ops.line }}>
+          {toolbar}
+        </View>
+      ) : null}
+
       <View style={{ flex: 1 }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingTop: 14, paddingBottom: insets.bottom + 24, gap: 0 }}
+          contentContainerStyle={{
+            paddingTop: toolbar ? 10 : 14,
+            paddingBottom: insets.bottom + 24,
+            flexGrow: 1,
+          }}
           keyboardShouldPersistTaps="handled"
           refreshControl={
             onRefresh ? (
@@ -334,24 +360,24 @@ export function AdminField(props: {
   placeholder?: string
 }) {
   return (
-    <TextInput
-      {...props}
-      placeholderTextColor="#94a3b8"
-      style={{
-        marginHorizontal: 16,
-        marginTop: 2,
-        marginBottom: 10,
-        backgroundColor: ops.sheet,
-        borderWidth: 1,
-        borderColor: ops.line,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 11,
-        fontFamily: fonts.body,
-        fontSize: 15,
-        color: ops.ink,
-      }}
-    />
+    <View style={{ width: "100%", paddingHorizontal: 16, marginTop: 2, marginBottom: 10 }}>
+      <TextInput
+        {...props}
+        placeholderTextColor="#94a3b8"
+        style={{
+          width: "100%",
+          backgroundColor: ops.sheet,
+          borderWidth: 1,
+          borderColor: ops.line,
+          borderRadius: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 11,
+          fontFamily: fonts.body,
+          fontSize: 15,
+          color: ops.ink,
+        }}
+      />
+    </View>
   );
 }
 
@@ -360,22 +386,25 @@ export function AdminButton({
   onPress,
   secondary = false,
   disabled = false,
+  compact = false,
 }: {
   label: string
   onPress: () => void
   secondary?: boolean
   disabled?: boolean
+  compact?: boolean
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={{
-        minHeight: 44,
+        alignSelf: compact ? undefined : "stretch",
+        minHeight: compact ? 34 : 44,
         borderRadius: 8,
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 14,
+        paddingHorizontal: compact ? 12 : 14,
         opacity: disabled ? 0.55 : 1,
         backgroundColor: secondary ? ops.sheet : ops.action,
         borderWidth: secondary ? 1 : 0,
