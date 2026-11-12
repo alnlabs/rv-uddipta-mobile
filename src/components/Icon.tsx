@@ -18,6 +18,7 @@ export type IconName =
   | "user"
   | "back"
   | "more"
+  | "plus"
   | "search"
   | "close"
   | "settings";
@@ -146,6 +147,8 @@ function paths(name: IconName, color: string) {
           <Circle {...pen} cx="18" cy="12" r="1.25" />
         </>
       );
+    case "plus":
+      return <Path {...pen} d="M12 5v14M5 12h14" />;
     case "search":
       return (
         <>

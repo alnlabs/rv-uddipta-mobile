@@ -11,6 +11,8 @@ export type Account = {
   place: string
   roles: AccountRole[]
   canSwitch: boolean
+  /** True when profiles.flat_id is set (invite / complaints), even if the public flat label failed to load. */
+  hasFlat: boolean
   flatNumber: string | null
   wing: string | null
   home: string | null

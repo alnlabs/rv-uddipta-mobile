@@ -27,7 +27,8 @@ export const QUICK_ACTION_CATALOG: QuickActionDef[] = [
   { id: "complaint", label: "Raise complaint", icon: "form", href: "/(resident)/request/new", feature: "requests", needsFlat: true },
   { id: "announcements", label: "Announcements", icon: "bell", href: "/(resident)/notices", feature: "announcements" },
   { id: "status", label: "Community status", icon: "floors", href: "/(resident)/status", feature: "building" },
-  { id: "visitors", label: "Visitors", icon: "people", href: "/(resident)/history", feature: "visitor_passes" },
+  // Flat members always get gate pass in the FAB; create_my_pass enforces access.
+  { id: "visitors", label: "Gate pass", icon: "people", href: "/(resident)/invite", needsFlat: true },
   { id: "events", label: "Events", icon: "feed", href: "/(resident)/events", feature: "events" },
 ];
 
@@ -149,5 +150,11 @@ export function availableQuickActions(input: {
   });
   if (!input.selected) return catalog;
   const picked = new Set(input.selected);
-  return catalog.filter((item) => picked.has(item.id));
+  const chosen = catalog.filter((item) => picked.has(item.id));
+  // Gate pass stays on the FAB for flat members even if Settings hid it earlier.
+  const gate = catalog.find((item) => item.id === "visitors");
+  if (gate && !chosen.some((item) => item.id === "visitors")) {
+    return [gate, ...chosen];
+  }
+  return chosen;
 }

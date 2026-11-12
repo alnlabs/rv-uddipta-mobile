@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Note, Screen } from "@/components/Screen";
+import { Note, Screen, SignOut } from "@/components/Screen";
 import { loadBrochureProject } from "@/lib/brochure";
 import { loadAccount } from "@/lib/community";
 import { joinKindLabel } from "@/lib/join";
@@ -95,6 +95,7 @@ export default function PublicHomeScreen() {
         </Text>
       </Pressable>
 
+      <SignOut />
       {message ? <Note text={message} /> : null}
     </Screen>
   );

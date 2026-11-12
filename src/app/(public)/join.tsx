@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Note, Screen } from "@/components/Screen";
+import { Note, Screen, SignOut } from "@/components/Screen";
 import {
   HOME_KIND_OPTIONS,
   JOIN_PATH_OPTIONS,
@@ -102,6 +102,7 @@ export default function JoinScreen() {
         <Pressable onPress={() => router.replace("/(public)")} style={ui.button}>
           <Text style={ui.buttonText}>Open public pages</Text>
         </Pressable>
+        <SignOut />
         {message ? <Note text={message} /> : null}
       </Screen>
     );
@@ -120,6 +121,7 @@ export default function JoinScreen() {
         >
           <Text style={ui.buttonText}>Continue</Text>
         </Pressable>
+        <SignOut />
       </Screen>
     );
   }
@@ -276,6 +278,7 @@ export default function JoinScreen() {
       ) : null}
 
       {message ? <Note text={message} /> : null}
+      <SignOut />
     </Screen>
   );
 }

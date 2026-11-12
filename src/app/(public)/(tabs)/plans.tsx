@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Note, Screen } from "@/components/Screen";
+import { Note, Screen, SignOut } from "@/components/Screen";
 import { loadBrochureFlats } from "@/lib/brochure";
 import { ui } from "@/theme";
 
@@ -37,6 +37,7 @@ export default function PublicPlansScreen() {
       ))}
       {ready && flats.length === 0 ? <Note text="No brochure homes to show yet." /> : null}
       {message ? <Note text={message} /> : null}
+      <SignOut />
     </Screen>
   );
 }

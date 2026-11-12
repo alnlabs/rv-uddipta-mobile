@@ -62,7 +62,7 @@ export default function SettingsScreen() {
       ]);
       setDisplay(home);
       setFeatures(enabled);
-      setCanComplain(Boolean(account && account.role !== "visitor" && account.flatNumber));
+      setCanComplain(Boolean(account && account.role !== "visitor" && (account.hasFlat || account.flatNumber)));
       setMessage("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load settings.");

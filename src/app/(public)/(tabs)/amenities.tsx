@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Note, Screen } from "@/components/Screen";
+import { Note, Screen, SignOut } from "@/components/Screen";
 import { loadBrochureProject } from "@/lib/brochure";
 import { ui } from "@/theme";
 
@@ -32,6 +32,7 @@ export default function PublicAmenitiesScreen() {
         ))}
       </View>
       {message ? <Note text={message} /> : null}
+      <SignOut />
     </Screen>
   );
 }

@@ -11,3 +11,16 @@ export function indiaDay(offset = 0) {
   const day = parts.find((part) => part.type === "day")?.value ?? "01";
   return `${year}-${month}-${day}`;
 }
+
+/** YYYY-MM-DD → Today / Tomorrow / Wed, 12 Nov */
+export function planDayLabel(value: string | null | undefined) {
+  const day = String(value || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return "";
+  if (day === indiaDay(0)) return "Today";
+  if (day === indiaDay(1)) return "Tomorrow";
+  return new Date(`${day}T12:00:00`).toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}

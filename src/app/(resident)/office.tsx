@@ -82,24 +82,39 @@ export default function OfficeDeskScreen() {
 
       let account = person;
       const officeRole = heldOfficeRole(account);
-      if (officeRole && account.role !== "admin" && account.role !== "facility") {
+      if (officeRole && account.role !== officeRole) {
         await switchAccountRole(officeRole);
         account = await loadAccount();
       }
 
-      const admin = account.role === "admin";
-      const facility = admin || account.role === "facility";
-      setIsAdmin(admin);
-      setIsFacility(facility);
+      const activeAdmin = account.role === "admin";
+      const activeFacility = account.role === "facility";
+      const holdsAdmin = activeAdmin || account.roles.some((item) => item.role === "admin");
+      const holdsFacility = activeFacility || account.roles.some((item) => item.role === "facility");
+      setIsAdmin(holdsAdmin);
+      setIsFacility(holdsAdmin || holdsFacility);
       setFeatures(enabled);
 
-      if (!admin && !facility) {
+      if (!holdsAdmin && !holdsFacility) {
         setSummary(null);
-        setMessage("No society role on this account.");
+        setMessage("No society admin or facility role on this account. Ask a super admin to assign it under Roles.");
         return;
       }
 
-      const next = await loadOfficeDeskSummary({ admin, facility });
+      if (!activeAdmin && !activeFacility) {
+        setSummary(null);
+        setMessage(
+          officeRole
+            ? `Could not switch to ${officeRole}. Open Profile, switch to Admin, then open this tab again.`
+            : "No society admin or facility role on this account.",
+        );
+        return;
+      }
+
+      const next = await loadOfficeDeskSummary({
+        admin: activeAdmin || holdsAdmin,
+        facility: activeAdmin || activeFacility || holdsFacility,
+      });
       setSummary(next);
       setMessage("");
     } catch (error) {

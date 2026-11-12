@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import { supabase } from "@/lib/supabase";
 
-const CACHE_KEY = "rv_features_v1";
+const CACHE_KEY = "rv_features_v2";
 
 export async function loadFeatures(): Promise<string[] | null> {
   try {
@@ -26,6 +26,7 @@ export async function loadFeatures(): Promise<string[] | null> {
 }
 
 export function featureOn(features: string[] | null | undefined, key: string) {
-  if (!features) return false;
+  // Unknown/failed feature load: keep desks visible. Explicit list still controls off.
+  if (features == null) return true;
   return features.includes(key);
 }

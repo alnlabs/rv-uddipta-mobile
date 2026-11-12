@@ -1,5 +1,4 @@
 import { normalizePhone, STAFF_EMAIL_DOMAIN } from "@/lib/phone";
-import { siteUrl } from "@/lib/site";
 import { supabase } from "@/lib/supabase";
 
 export type OfficeRoleOption = { value: string; label: string };
@@ -41,6 +40,73 @@ const ROLE_LABELS: Record<string, string> = {
   tenant: "Tenant",
   visitor: "Signed in · no home yet",
 };
+
+/** One short line for pickers — plain words. */
+const ROLE_HELP: Record<string, string> = {
+  admin: "Runs the office — new members, homes, dues notes, notices, and the building team.",
+  builder: "Keeps the public building info up to date — not homes or who may join.",
+  committee: "Makes society decisions and notices — not the gate or repair jobs.",
+  facility: "Looks after repairs — opens jobs and gives them to staff; shared-space bookings.",
+  staff: "Does the repair jobs given to them — plumbing, cleaning, lifts; marked present at the gate.",
+  security: "Works the gate — guest codes, who comes in and out, and trouble reports.",
+  owner: "Lives in a home — guest passes, dues notes, complaints, and parking for that home.",
+  co_owner: "Family in the same home — same day-to-day tools as the owner.",
+  tenant: "Rents a home — guest passes and day-to-day help; cannot change owner papers.",
+  visitor: "Signed in with no home yet — can ask to join; community opens after approval.",
+};
+
+export function officeRoleHelp(role: string | null | undefined) {
+  if (!role) return "";
+  return ROLE_HELP[role] || "";
+}
+
+/** Guide for the People “?” modal — plain language. */
+export const PEOPLE_ROLE_GUIDE: {
+  title: string
+  reportsTo: string
+  tasks: string
+}[] = [
+  {
+    title: "Main office (super)",
+    reportsTo: "The people who set up the whole app",
+    tasks: "Switches big tools on or off, and chooses who is society admin.",
+  },
+  {
+    title: "Society admin",
+    reportsTo: "Chosen by the main office",
+    tasks: "Approves new people, looks after homes, dues notes, notices, and adds the building team.",
+  },
+  {
+    title: "Facility manager",
+    reportsTo: "Society admin",
+    tasks: "Opens repair jobs, gives them to staff, and handles shared-space bookings.",
+  },
+  {
+    title: "Service staff",
+    reportsTo: "Facility manager for jobs; security marks them present",
+    tasks: "Does the jobs they are given — plumbing, cleaning, lifts — on My work.",
+  },
+  {
+    title: "Security",
+    reportsTo: "Society admin",
+    tasks: "At the gate: guest codes, walk-ins, who enters and leaves, helper passes, and incidents.",
+  },
+  {
+    title: "Committee",
+    reportsTo: "Society admin",
+    tasks: "Society decisions, votes, and official notices — not the gate or repair jobs.",
+  },
+  {
+    title: "Builder",
+    reportsTo: "Society admin",
+    tasks: "Updates public building info (plans, amenities) — not homes or join requests.",
+  },
+  {
+    title: "Owner, family, or tenant",
+    reportsTo: "Added under Homes / Flats — not with Create here",
+    tasks: "For their home: guest passes, dues notes, complaints, parking. Add them under Flats.",
+  },
+];
 
 function dbError(error: { message: string } | null, fallback: string) {
   if (!error) return;
@@ -196,29 +262,7 @@ function deskFromPayload(payload: Record<string, unknown>): RolesDesk {
   };
 }
 
-/** Prefer portal admin API (same path as create). Fall back to RPC if the site is down. */
 export async function loadRolesDesk(): Promise<RolesDesk> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (token) {
-    try {
-      const response = await fetch(`${siteUrl}/api/mobile/office-users`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
-      if (response.ok) return deskFromPayload(payload);
-      // Deployed API auth/business errors — don't hide behind RPC.
-      if (response.status === 401 || response.status === 403 || response.status === 400) {
-        throw new Error(String(payload.message || "Could not load people."));
-      }
-    } catch (error) {
-      if (error instanceof Error && !/network|fetch|failed to fetch/i.test(error.message)) {
-        throw error;
-      }
-    }
-  }
-
   const { data, error } = await supabase.rpc("list_office_people");
   dbError(error, "Could not load people.");
   return deskFromPayload((data && typeof data === "object" ? data : {}) as Record<string, unknown>);
@@ -254,7 +298,7 @@ export async function clearOfficeRole(userId: string) {
   return data as { ok: boolean; message: string };
 }
 
-/** Create staff with phone + PIN (email optional) via the portal admin API. */
+/** Create staff with phone + PIN via Supabase RPC (no website API). */
 export async function createOfficeUser(input: {
   phone: string
   pin: string
@@ -262,40 +306,23 @@ export async function createOfficeUser(input: {
   displayName?: string
   email?: string
 }) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) throw new Error("Sign in first.");
-
-  const response = await fetch(`${siteUrl}/api/mobile/office-users`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      phone: input.phone,
-      pin: input.pin,
-      email: input.email || "",
-      role: input.role,
-      displayName: input.displayName || "",
-    }),
+  const { data, error } = await supabase.rpc("provision_office_user", {
+    staff_phone: input.phone,
+    staff_pin: input.pin,
+    next_role: input.role,
+    display_name: input.displayName || "",
+    contact_email: input.email || "",
   });
-  const payload = await response.json().catch(() => ({})) as {
-    message?: string
-    ok?: boolean
-    roleLabel?: string
-  };
-  if (!response.ok) {
-    throw new Error(payload.message || "Could not create that account.");
-  }
-  return payload as {
-    ok: boolean
-    created: boolean
-    userId: string
-    phone: string
-    email: string | null
-    role: string
-    roleLabel: string
-    message: string
+  dbError(error, "Could not create that account.");
+  const payload = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  return {
+    ok: Boolean(payload.ok),
+    created: Boolean(payload.created),
+    userId: String(payload.userId || payload.user_id || ""),
+    phone: String(payload.phone || input.phone),
+    email: payload.email == null ? null : String(payload.email),
+    role: String(payload.role || input.role),
+    roleLabel: String(payload.roleLabel || payload.role_label || input.role),
+    message: String(payload.message || "Staff account ready."),
   };
 }

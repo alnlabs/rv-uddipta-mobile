@@ -3,7 +3,7 @@ import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Empty, SectionLabel } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
-import { Screen } from "@/components/Screen";
+import { MenuRow, Screen } from "@/components/Screen";
 import { loadNotices } from "@/lib/community";
 import { ui } from "@/theme";
 
@@ -29,7 +29,7 @@ export default function MaintenanceScreen() {
 
   return (
     <Screen title="Maintenance" onRefresh={load} busy={!ready && !message}>
-      <Text style={ui.body}>Official maintenance notices. Dues and receipts appear when the office publishes a billing record for your home.</Text>
+      <Text style={ui.body}>Official maintenance notices and society dues for your home.</Text>
       {message ? (
         <>
           <Text style={ui.error}>{message}</Text>
@@ -38,6 +38,15 @@ export default function MaintenanceScreen() {
           </Pressable>
         </>
       ) : null}
+
+      <SectionLabel title="Dues" />
+      <MenuRow
+        icon="form"
+        title="Dues and receipts"
+        detail="Open invoices and office ledger"
+        onPress={() => router.push("/(resident)/dues")}
+      />
+
       {ready ? <SectionLabel title="Notices" /> : null}
       {ready && items.length === 0 ? <Empty title="No maintenance notices" detail="A shutdown or repair notice will appear here." /> : null}
       {items.map((item) => (
@@ -47,13 +56,6 @@ export default function MaintenanceScreen() {
           {item.body ? <HtmlBody html={item.body} lines={3} /> : null}
         </Pressable>
       ))}
-      {ready ? <SectionLabel title="Dues and receipts" /> : null}
-      {ready ? (
-        <Empty
-          title="No billing records"
-          detail="Payment history, outstanding balances, and receipts are not available. Nothing here is marked as paid."
-        />
-      ) : null}
     </Screen>
   );
 }

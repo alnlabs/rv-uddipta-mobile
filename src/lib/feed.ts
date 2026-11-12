@@ -1,5 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import { indiaDay } from "@/lib/day";
+import { indiaDay, planDayLabel } from "@/lib/day";
 import { supabase } from "@/lib/supabase";
 
 export type Access = "none" | "view" | "manage";
@@ -146,12 +146,7 @@ function todayKey() {
 
 export function dateLabel(value: string | null) {
   if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return null;
-  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return planDayLabel(value.slice(0, 10)) || null;
 }
 
 function when(value: string) {

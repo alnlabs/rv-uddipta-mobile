@@ -81,6 +81,15 @@ export async function loadAccount(): Promise<Account> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) throw new Error(userError?.message || "Sign in again.");
   const user = userData.user;
+
+  // Attach a home the office already linked (Google / owner email) even if this
+  // account first signed in as "just exploring".
+  try {
+    await supabase.rpc("ensure_my_home");
+  } catch {
+    // RPC missing until migration is pushed — continue with profile as-is.
+  }
+
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("role, flat_id, display_name")
@@ -88,27 +97,56 @@ export async function loadAccount(): Promise<Account> {
     .maybeSingle();
   dbError(error, "Could not load your home.");
 
-  const role = profile?.role || "visitor";
-  const claimsAFlat = role === "owner" || role === "co_owner" || role === "tenant";
-  const name = profile?.display_name || String(user.user_metadata?.full_name || user.email || "");
+  let role = profile?.role || "visitor";
+  let flatId = profile?.flat_id ? Number(profile.flat_id) : null;
   let flatNumber: string | null = null;
   let wing: string | null = null;
   let flatLookupFailed = false;
-  if (profile?.flat_id) {
-    const { data: flat, error: flatError } = await supabase
-      .from("flats_public")
-      .select("flat_number, wing")
-      .eq("id", profile.flat_id)
-      .maybeSingle();
-    flatLookupFailed = Boolean(flatError);
-    flatNumber = flat?.flat_number ? String(flat.flat_number) : null;
-    wing = flat?.wing ? String(flat.wing) : null;
-  }
+  const name = profile?.display_name || String(user.user_metadata?.full_name || user.email || "");
 
   const superAdmin = await loadSuperAdminFlag();
   const { data: held } = superAdmin
-    ? { data: [] as { role: string }[] }
-    : await supabase.from("person_roles").select("role").eq("user_id", user.id);
+    ? { data: [] as { role: string; flat_id?: number | null }[] }
+    : await supabase.from("person_roles").select("role, flat_id").eq("user_id", user.id);
+
+  if (!flatId && !superAdmin) {
+    const homeHeld = (held ?? []).find(
+      (row) =>
+        row.flat_id
+        && (row.role === "owner" || row.role === "co_owner" || row.role === "tenant"),
+    );
+    if (homeHeld?.flat_id) {
+      flatId = Number(homeHeld.flat_id);
+      if (role === "visitor") role = String(homeHeld.role);
+    } else {
+      // Fallback when ensure_my_home is not on the DB yet: read the linked unit.
+      const { data: owned } = await supabase
+        .from("flats")
+        .select("id, flat_number, wing")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (owned?.id) {
+        flatId = Number(owned.id);
+        if (role === "visitor") role = "owner";
+        flatNumber = owned.flat_number ? String(owned.flat_number) : null;
+        wing = owned.wing ? String(owned.wing) : null;
+      }
+    }
+  }
+
+  const claimsAFlat = role === "owner" || role === "co_owner" || role === "tenant";
+  const hasFlat = Boolean(flatId);
+  if (flatId && !flatNumber) {
+    const { data: flat, error: flatError } = await supabase
+      .from("flats_public")
+      .select("flat_number, wing")
+      .eq("id", flatId)
+      .maybeSingle();
+    flatLookupFailed = Boolean(flatError);
+    flatNumber = flat?.flat_number ? String(flat.flat_number) : null;
+    wing = flat?.wing ? String(flat.wing) : wing;
+  }
+
   const roleNames = [...new Set([role, ...(held ?? []).map((row) => String(row.role))])];
   const place = phonePlace(role, superAdmin);
   const joinIntent = String(user.user_metadata?.joinIntent || "");
@@ -146,7 +184,7 @@ export async function loadAccount(): Promise<Account> {
       : "Your access request is waiting for the office.";
   } else if (joinRejected) {
     claimNote = joinRequest?.reason || "Your request was not approved. You can send a new one.";
-  } else if (!superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat) {
+  } else if (!superAdmin && !flatLookupFailed && place === "home" && !hasFlat && claimsAFlat) {
     claimNote = "No home is linked yet. Claim your flat so the office can approve you.";
   } else if (needsJoin) {
     claimNote = "Tell the office who you are so they can open the right access.";
@@ -160,10 +198,12 @@ export async function loadAccount(): Promise<Account> {
     place,
     roles: superAdmin ? [{ role: "admin", label: "Super admin" }] : roleNames.map((item) => ({ role: item, label: label(item) })),
     canSwitch: !superAdmin && roleNames.length > 1,
-    flatNumber: place === "home" ? flatNumber : null,
-    wing: place === "home" ? wing : null,
+    hasFlat,
+    // Keep the flat label whenever linked — place shells should not hide invite/complaints.
+    flatNumber: !hasFlat ? null : flatNumber || (flatLookupFailed ? "Home" : null),
+    wing: hasFlat ? wing : null,
     home: claimNote,
-    needsClaim: needsJoin || (!superAdmin && !flatLookupFailed && place === "home" && !flatNumber && claimsAFlat),
+    needsClaim: needsJoin || (!superAdmin && !flatLookupFailed && place === "home" && !hasFlat && claimsAFlat),
     needsJoin,
     joinPending,
     joinBrowse,
@@ -226,9 +266,9 @@ export async function loadUpdates() {
 }
 
 const PASS_STATUS: Record<string, string> = {
-  pending_approval: "Waiting for you",
-  expected: "Expected",
-  waiting: "Waiting at the gate",
+  pending_approval: "Needs approval",
+  expected: "Ready for the gate",
+  waiting: "At the gate",
   inside: "Inside",
   left: "Left",
   refused: "Refused",
@@ -246,7 +286,7 @@ export async function loadPasses() {
     .limit(30);
   dbError(error, "Could not load passes.");
   return {
-    canCreate: account.role !== "visitor" && Boolean(account.flatNumber),
+    canCreate: account.role !== "visitor" && account.hasFlat,
     passes: (data ?? []).map((pass) => ({
       id: pass.id as number,
       code: String(pass.code),
@@ -364,16 +404,44 @@ export async function replyRequest(noteId: number, body: string) {
   return "Sent.";
 }
 
+async function loadPlannedBookings() {
+  const today = indiaDay();
+  const { loadAmenities } = await import("@/lib/office");
+  const desk = await loadAmenities();
+  return (desk.mine ?? [])
+    .filter((row) => {
+      const status = String(row.status || "").toLowerCase();
+      if (status === "refused" || status === "cancelled" || status === "done") return false;
+      return String(row.when || "") >= today;
+    })
+    .slice(0, 5);
+}
+
 export async function loadAttention() {
-  const [passes, requests, notices, notifications] = await Promise.all([
+  const today = indiaDay();
+  const [passes, requests, notices, notifications, bookings] = await Promise.all([
     loadPasses().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
     loadRequests().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
     loadNotices().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
     loadNotifications().then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: null })),
+    loadPlannedBookings()
+      .then((value) => ({ ok: true as const, value }))
+      .catch(() => ({ ok: false as const, value: [] as Awaited<ReturnType<typeof loadPlannedBookings>> })),
   ]);
+  const allPasses = passes.ok ? passes.value.passes : [];
+  const plannedVisitors = allPasses
+    .filter((pass) =>
+      (pass.raw === "expected" || pass.raw === "inside")
+      && pass.date >= today
+      && !pass.canDecide
+      && !pass.atGate)
+    .slice(0, 5)
+    .sort((a, b) => a.date.localeCompare(b.date));
   return {
     incomplete: !passes.ok || !requests.ok || !notices.ok || !notifications.ok,
-    waitingVisitors: passes.ok ? passes.value.passes.filter((pass) => pass.canDecide || pass.atGate) : [],
+    waitingVisitors: allPasses.filter((pass) => pass.canDecide || pass.atGate),
+    plannedVisitors,
+    plannedBookings: bookings.ok ? bookings.value : [],
     waitingRequests: requests.ok ? requests.value.requests.filter((item) => item.status === "Awaiting information") : [],
     openRequests: requests.ok ? requests.value.requests.filter((item) => item.status !== "Resolved").slice(0, 3) : [],
     notices: notices.ok ? notices.value.slice(0, 3) : [],

@@ -129,7 +129,12 @@ export async function removeVehicle(vehicleId: number) {
   return rpc<{ ok: boolean }>("remove_my_vehicle", { vehicle_id: vehicleId });
 }
 
-export type NeighbourPerson = { name: string; photoUrl?: string | null; role?: string };
+export type NeighbourPerson = {
+  name: string
+  photoUrl?: string | null
+  role?: string
+  relation?: string | null
+};
 export type NeighbourRenter = {
   name: string
   phone: string
@@ -163,6 +168,15 @@ export type NeighbourHome = {
   canCall?: boolean
 };
 
+export function relationLabel(relation?: string | null) {
+  if (relation === "spouse") return "Spouse";
+  if (relation === "child") return "Child";
+  if (relation === "parent") return "Parent";
+  if (relation === "sibling") return "Sibling";
+  if (relation === "other") return "Family";
+  return relation || "";
+}
+
 function maskPhone(phone: string | null | undefined) {
   const value = String(phone || "").replace(/\D/g, "");
   if (!value) return "";
@@ -175,6 +189,19 @@ function sameHome(a?: string | null, b?: string | null) {
   return a.trim().toUpperCase() === b.trim().toUpperCase();
 }
 
+async function peopleOnFlat(flatId: number): Promise<NeighbourPerson[]> {
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("display_name, role")
+    .eq("flat_id", flatId);
+  return (profiles ?? [])
+    .map((row) => ({
+      name: String(row.display_name || "Member"),
+      role: String(row.role || "owner"),
+    }))
+    .filter((row) => row.name);
+}
+
 async function loadFlatDetails(home: NeighbourHome): Promise<NeighbourHome> {
   let query = supabase
     .from("flats_public")
@@ -185,9 +212,10 @@ async function loadFlatDetails(home: NeighbourHome): Promise<NeighbourHome> {
   if (!row) return home;
 
   const flatId = Number(row.id);
-  const [{ data: members }, { data: renters }] = await Promise.all([
-    supabase.from("flat_members").select("name, photo_url").eq("flat_id", flatId).order("id"),
+  const [{ data: members }, { data: renters }, people] = await Promise.all([
+    supabase.from("flat_members").select("name, photo_url, relation").eq("flat_id", flatId).order("id"),
     supabase.from("flat_renters").select("name, phone, start_date, end_date").eq("flat_id", flatId).order("id"),
+    peopleOnFlat(flatId).catch(() => [] as NeighbourPerson[]),
   ]);
 
   return {
@@ -210,8 +238,10 @@ async function loadFlatDetails(home: NeighbourHome): Promise<NeighbourHome> {
       .map((person) => ({
         name: String(person.name || ""),
         photoUrl: person.photo_url ? String(person.photo_url) : null,
+        relation: person.relation ? String(person.relation) : null,
       }))
       .filter((person) => person.name),
+    people,
     renters: (renters ?? [])
       .map((person) => {
         const endDate = person.end_date ? String(person.end_date).slice(0, 10) : null;
@@ -224,7 +254,6 @@ async function loadFlatDetails(home: NeighbourHome): Promise<NeighbourHome> {
         };
       })
       .filter((person) => person.name),
-    people: home.people ?? [],
   };
 }
 
@@ -241,6 +270,35 @@ function summaryHome(home: NeighbourHome): NeighbourHome {
     renters: [],
     people: [],
   };
+}
+
+/** Own flat for Profile — skips neighbours feature gate. */
+export async function loadMyHome(flatNumber?: string | null): Promise<NeighbourHome | null> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) throw new Error(userError?.message || "Sign in again.");
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("flat_id")
+    .eq("user_id", userData.user.id)
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message || "Could not load your home.");
+  if (!profile?.flat_id && !flatNumber) return null;
+
+  const seed: NeighbourHome = {
+    home: flatNumber || "",
+    flatId: profile?.flat_id ? Number(profile.flat_id) : undefined,
+    wing: "",
+    floor: 0,
+    type: "",
+    owner: "",
+    phone: "",
+    tenant: "",
+    tenantPhone: "",
+    mine: true,
+    registered: true,
+  };
+  return loadFlatDetails(seed);
 }
 
 export async function loadNeighbours(q = "") {

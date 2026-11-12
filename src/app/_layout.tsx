@@ -1,23 +1,26 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import * as Linking from "expo-linking";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { HankenGrotesk_400Regular } from "@expo-google-fonts/hanken-grotesk";
 import { Manrope_600SemiBold } from "@expo-google-fonts/manrope";
-import { BrandScreen } from "@/components/Screen";
+import { BrandScreen, LoadingOverlay } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
 import { finishAuthRedirect, isAuthReturn } from "@/lib/finishAuth";
 import { attachPushRouting, registerPush } from "@/lib/notify";
 import { pathForAccount, publicMayVisit, superMayVisit } from "@/lib/place";
 import { SessionProvider, useSession } from "@/lib/session";
-import { colors } from "@/theme";
+import { supabase } from "@/lib/supabase";
+import { colors, ui } from "@/theme";
 
 function Gate({ children }: { children: ReactNode }) {
   const { ready, session } = useSession();
   const segments = useSegments();
   const router = useRouter();
   const openedFor = useRef<string | null>(null);
+  /** After first real screen (e.g. sign-in), never go back to launch BrandScreen. */
+  const uiReady = useRef(false);
   const [startError, setStartError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [booting, setBooting] = useState(true);
@@ -72,7 +75,12 @@ function Gate({ children }: { children: ReactNode }) {
       })
       .catch((error: unknown) => {
         openedFor.current = null;
-        setStartError(error instanceof Error ? error.message : "Could not open your account.");
+        const text = error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : "Could not open your account.";
+        setStartError(text && text !== "undefined is not a function" ? text : "Could not open your account. Check your connection and try again.");
       })
       .finally(() => {
         setBooting(false);
@@ -87,33 +95,77 @@ function Gate({ children }: { children: ReactNode }) {
   }, [session, router]);
 
   if (startError) {
+    if (!uiReady.current) {
+      return (
+        <BrandScreen>
+          <Text style={{ color: "#f8fafc", textAlign: "center", paddingHorizontal: 24 }}>{startError}</Text>
+          <Pressable
+            onPress={() => {
+              setStartError("");
+              setBooting(true);
+              setAttempt((value) => value + 1);
+            }}
+            style={{ marginTop: 16 }}
+          >
+            <Text style={{ color: "#f8fafc", fontWeight: "600" }}>Try again</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setStartError("");
+              supabase.auth.signOut().catch(() => undefined);
+            }}
+            style={{ marginTop: 12 }}
+          >
+            <Text style={{ color: "#cbd5e1", fontWeight: "600" }}>Sign out</Text>
+          </Pressable>
+        </BrandScreen>
+      );
+    }
     return (
-      <BrandScreen>
-        <Text style={{ color: "#f8fafc", textAlign: "center", paddingHorizontal: 24 }}>{startError}</Text>
+      <View style={{ flex: 1, backgroundColor: colors.page, justifyContent: "center", padding: 24, gap: 16 }}>
+        <Text style={ui.error}>{startError}</Text>
         <Pressable
           onPress={() => {
             setStartError("");
             setBooting(true);
             setAttempt((value) => value + 1);
           }}
-          style={{ marginTop: 16 }}
+          style={ui.button}
         >
-          <Text style={{ color: "#f8fafc", fontWeight: "600" }}>Try again</Text>
+          <Text style={ui.buttonText}>Try again</Text>
         </Pressable>
-      </BrandScreen>
+        <Pressable
+          onPress={() => {
+            setStartError("");
+            supabase.auth.signOut().catch(() => undefined);
+          }}
+          style={ui.quiet}
+        >
+          <Text style={ui.quietText}>Sign out</Text>
+        </Pressable>
+      </View>
     );
   }
 
-  // Launch brand screen until session + first route are ready (no skeleton).
+  // Cold launch only — once sign-in (or any screen) has shown, keep it and use a light overlay.
   if (!ready || booting) {
+    if (!uiReady.current) {
+      return (
+        <BrandScreen
+          busy
+          status={!ready ? "Checking your sign-in…" : "Opening your account…"}
+        />
+      );
+    }
     return (
-      <BrandScreen
-        busy
-        status={!ready ? "Checking your sign-in…" : "Opening your account…"}
-      />
+      <View style={{ flex: 1 }}>
+        {children}
+        <LoadingOverlay />
+      </View>
     );
   }
 
+  uiReady.current = true;
   return children;
 }
 

@@ -67,7 +67,7 @@ export default function GateScreen() {
   const quiet = ready && pending.length === 0 && waiting.length === 0 && expected.length === 0 && inside.length === 0;
 
   return (
-    <Screen title="Gate" showBack={false} onRefresh={load} busy={!ready && !message}>
+    <Screen title="Security Gate" showBack={false} onRefresh={load} busy={!ready && !message}>
       <Text style={ui.body}>Scan a QR, notify the home, or call a flat.</Text>
       <Pressable onPress={() => router.push("/(security)/scan")} style={ui.button}>
         <Text style={ui.buttonText}>Scan QR pass</Text>

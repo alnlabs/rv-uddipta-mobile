@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Dimensions, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AdminBanner,
   AdminButton,
@@ -16,6 +17,8 @@ import {
   clearOfficeRole,
   createOfficeUser,
   loadRolesDesk,
+  officeRoleHelp,
+  PEOPLE_ROLE_GUIDE,
   type OfficeRoleOption,
   type RolePerson,
 } from "@/lib/rolesDesk";
@@ -41,6 +44,250 @@ function roleLabel(value: string, roles: OfficeRoleOption[]) {
   const match = roles.find((item) => item.value === value);
   if (match?.label) return match.label;
   return HELD_LABELS[value] || value;
+}
+
+function RolePicker({
+  label = "Role",
+  options,
+  value,
+  onChange,
+}: {
+  label?: string
+  options: OfficeRoleOption[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
+  const chosen = roleLabel(value, options);
+  const help = officeRoleHelp(value);
+
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: "#64748b", fontFamily: fonts.display, fontSize: 11, fontWeight: "600", letterSpacing: 0.6, textTransform: "uppercase" }}>
+        {label}
+      </Text>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={{
+          minHeight: 44,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: ops.line,
+          backgroundColor: ops.page,
+          paddingHorizontal: 12,
+          paddingVertical: 11,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <Text style={{ color: ops.ink, fontFamily: fonts.body, fontSize: 15, flex: 1 }} numberOfLines={1}>
+          {chosen}
+        </Text>
+        <Text style={{ color: "#64748b", fontFamily: fonts.display, fontSize: 12, fontWeight: "600" }}>
+          Change
+        </Text>
+      </Pressable>
+      {help ? (
+        <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>
+          {help}
+        </Text>
+      ) : null}
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "flex-end" }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={() => setOpen(false)}
+            style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+          />
+          <View
+            style={{
+              height: Math.round(Dimensions.get("window").height * 0.72),
+              backgroundColor: ops.sheet,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingTop: 14,
+              paddingBottom: Math.max(insets.bottom, 16),
+            }}
+          >
+            <View style={{
+              paddingHorizontal: 16,
+              paddingBottom: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+            >
+              <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 16, fontWeight: "600", flex: 1 }}>
+                Pick a role
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                onPress={() => setOpen(false)}
+                hitSlop={8}
+                style={{
+                  minWidth: 64,
+                  minHeight: 36,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: ops.line,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 12,
+                  backgroundColor: ops.page,
+                }}
+              >
+                <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>
+                  Close
+                </Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={{ flex: 1, paddingHorizontal: 16 }}
+              contentContainerStyle={{ gap: 6, paddingBottom: 8 }}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+            >
+              {options.map((item) => {
+                const active = item.value === value;
+                const name = item.value === "facility" ? "Facility" : item.label;
+                const tip = officeRoleHelp(item.value);
+                return (
+                  <Pressable
+                    key={item.value}
+                    onPress={() => {
+                      onChange(item.value);
+                      setOpen(false);
+                    }}
+                    style={{
+                      minHeight: 52,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      justifyContent: "center",
+                      backgroundColor: active ? ops.badge : ops.page,
+                      borderWidth: 1,
+                      borderColor: active ? "#f59e0b" : ops.line,
+                      gap: 4,
+                    }}
+                  >
+                    <Text style={{
+                      color: active ? ops.badgeText : ops.ink,
+                      fontFamily: fonts.display,
+                      fontSize: 15,
+                      fontWeight: "600",
+                    }}
+                    >
+                      {name}
+                    </Text>
+                    {tip ? (
+                      <Text
+                        style={{
+                          color: active ? "#78350f" : "#64748b",
+                          fontFamily: fonts.body,
+                          fontSize: 12,
+                          lineHeight: 16,
+                        }}
+                        numberOfLines={3}
+                      >
+                        {tip}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function PeopleRolesHelpModal({
+  open,
+  onClose,
+}: {
+  open: boolean
+  onClose: () => void
+}) {
+  const insets = useSafeAreaInsets();
+  const sheetHeight = Math.round(Dimensions.get("window").height * 0.82);
+
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "flex-end" }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close help"
+          onPress={onClose}
+          style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+        />
+        <View
+          style={{
+            height: sheetHeight,
+            backgroundColor: ops.sheet,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            paddingTop: 14,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
+          <View style={{ paddingHorizontal: 16, paddingBottom: 10, gap: 4 }}>
+            <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
+              Who does what
+            </Text>
+            <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
+              Use Create for the building team (phone and PIN). People who live in a home are added under Flats.
+            </Text>
+          </View>
+          <ScrollView
+            style={{ flex: 1, paddingHorizontal: 16 }}
+            contentContainerStyle={{ gap: 10, paddingBottom: 12 }}
+            showsVerticalScrollIndicator
+            bounces
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+          >
+            {PEOPLE_ROLE_GUIDE.map((item) => (
+              <View
+                key={item.title}
+                style={{
+                  borderWidth: 1,
+                  borderColor: ops.line,
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  gap: 4,
+                  backgroundColor: ops.page,
+                }}
+              >
+                <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 14, fontWeight: "600" }}>
+                  {item.title}
+                </Text>
+                <Text style={{ color: "#92400e", fontFamily: fonts.body, fontSize: 11, lineHeight: 15 }}>
+                  Works with: {item.reportsTo}
+                </Text>
+                <Text style={{ color: "#475569", fontFamily: fonts.body, fontSize: 12, lineHeight: 16 }}>
+                  {item.tasks}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+          <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+            <AdminButton label="Close" secondary onPress={onClose} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 }
 
 /** Held office role for display — not limited to assignable chips (admin is hidden from society admins). */
@@ -93,11 +340,14 @@ export function RolesAssign({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "office" | "security" | "staff" | "facility" | "homes">("office");
   const [createOpen, setCreateOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [createPhone, setCreatePhone] = useState("");
   const [createPin, setCreatePin] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createName, setCreateName] = useState("");
   const [createRole, setCreateRole] = useState("security");
+  const [editPin, setEditPin] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState<"error" | "ok">("error");
   const [ready, setReady] = useState(false);
@@ -166,15 +416,33 @@ export function RolesAssign({
     setSaving(true);
     setMessage("");
     try {
-      const result = await assignOfficeRole({
-        userId: selected.userId,
-        role,
-        displayName,
-      });
-      setTone("ok");
-      setMessage(result.message || `${chosenLabel} assigned.`);
+      if (selected.phone) {
+        const pinDigits = editPin.replace(/\D/g, "");
+        if (pinDigits && pinDigits.length < 4) {
+          throw new Error("New PIN must be 4 to 6 digits, or leave blank.");
+        }
+        const result = await createOfficeUser({
+          phone: selected.phone,
+          pin: pinDigits,
+          role,
+          displayName,
+          email: editEmail,
+        });
+        setTone("ok");
+        setMessage(result.message || `${chosenLabel} updated.`);
+      } else {
+        const result = await assignOfficeRole({
+          userId: selected.userId,
+          role,
+          displayName,
+        });
+        setTone("ok");
+        setMessage(result.message || `${chosenLabel} assigned.`);
+      }
       setSelectedId(null);
       setDisplayName("");
+      setEditPin("");
+      setEditEmail("");
       await load();
     } catch (error) {
       setTone("error");
@@ -273,12 +541,17 @@ export function RolesAssign({
   function openPerson(person: RolePerson) {
     if (selectedId === person.userId) {
       setSelectedId(null);
+      setEditPin("");
+      setEditEmail("");
       return;
     }
     const current = officeRoleOf(person);
+    setCreateOpen(false);
     setSelectedId(person.userId);
     setRole(current || roles[0]?.value || "facility");
     setDisplayName(person.name);
+    setEditPin("");
+    setEditEmail(person.email || "");
     setMessage("");
   }
 
@@ -310,12 +583,33 @@ export function RolesAssign({
         onSubmit: () => setSearchOpen(false),
       }}
       action={(
-        <AdminButton
-          compact
-          label={createOpen ? "Close" : "Create"}
-          secondary={createOpen}
-          onPress={() => setCreateOpen((open) => !open)}
-        />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <AdminButton
+            compact
+            label={createOpen ? "Close" : "Create"}
+            secondary={createOpen}
+            onPress={() => setCreateOpen((open) => !open)}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Who does what"
+            onPress={() => setHelpOpen(true)}
+            hitSlop={6}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(248,250,252,0.35)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: ops.headerText, fontFamily: fonts.display, fontSize: 16, fontWeight: "700" }}>
+              ?
+            </Text>
+          </Pressable>
+        </View>
       )}
       toolbar={(
         <View style={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
@@ -347,13 +641,9 @@ export function RolesAssign({
               gap: 8,
             }}
             >
-              <Chips
-                compact
-                scroll
-                options={roles.map((item) => ({
-                  value: item.value,
-                  label: item.value === "facility" ? "Facility" : item.label,
-                }))}
+              <RolePicker
+                label="Type"
+                options={roles}
                 value={createRole}
                 onChange={setCreateRole}
               />
@@ -401,6 +691,7 @@ export function RolesAssign({
         </View>
       )}
     >
+      <PeopleRolesHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
       {header}
       {message ? <AdminBanner text={message} tone={tone} /> : null}
       {ready && visible.length === 0 ? <AdminEmpty title="No matching people" /> : null}
@@ -472,20 +763,24 @@ export function RolesAssign({
                   }}
                   >
                     <Text style={{ color: ops.actionText, fontFamily: fonts.display, fontSize: 12, fontWeight: "600" }}>
-                      {open ? "Close" : office ? "Change" : "Assign"}
+                      {open ? "Close" : office ? "Edit" : "Assign"}
                     </Text>
                   </View>
                 </Pressable>
 
                 {open ? (
                   <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 10 }}>
-                    <Chips
-                      compact
-                      scroll
-                      options={roles.map((item) => ({
-                        value: item.value,
-                        label: item.value === "facility" ? "Facility" : item.label,
-                      }))}
+                    <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 15, fontWeight: "600" }}>
+                      {person.phone ? "Edit staff" : "Assign role"}
+                    </Text>
+                    {person.phone ? (
+                      <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13 }}>
+                        Phone {person.phone} · leave PIN blank to keep the current one
+                      </Text>
+                    ) : null}
+                    <RolePicker
+                      label="Role"
+                      options={roles}
                       value={role}
                       onChange={setRole}
                     />
@@ -494,37 +789,44 @@ export function RolesAssign({
                       onChangeText={setDisplayName}
                       placeholder="Display name"
                       placeholderTextColor="#94a3b8"
-                      style={{
-                        backgroundColor: ops.sheet,
-                        borderWidth: 1,
-                        borderColor: ops.line,
-                        borderRadius: 8,
-                        paddingHorizontal: 12,
-                        paddingVertical: 11,
-                        fontFamily: fonts.body,
-                        fontSize: 15,
-                        color: ops.ink,
-                      }}
+                      style={fieldStyle}
                     />
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <View style={{ flex: 1 }}>
-                        {sameRole ? (
-                          <AdminButton label={`Already ${chosenLabel}`} disabled onPress={() => undefined} />
-                        ) : (
-                          <AdminButton
-                            label={
-                              saving
-                                ? "Saving…"
-                                : alreadyAssigned
-                                  ? `Change to ${chosenLabel}`
-                                  : `Assign ${chosenLabel}`
-                            }
-                            disabled={saving}
-                            onPress={() => { save().catch(() => undefined); }}
-                          />
-                        )}
-                      </View>
-                    </View>
+                    {person.phone ? (
+                      <>
+                        <TextInput
+                          value={editPin}
+                          onChangeText={setEditPin}
+                          keyboardType="number-pad"
+                          secureTextEntry
+                          placeholder="New PIN (optional)"
+                          placeholderTextColor="#94a3b8"
+                          maxLength={6}
+                          style={fieldStyle}
+                        />
+                        <TextInput
+                          value={editEmail}
+                          onChangeText={setEditEmail}
+                          autoCapitalize="none"
+                          keyboardType="email-address"
+                          placeholder="Email (optional)"
+                          placeholderTextColor="#94a3b8"
+                          style={fieldStyle}
+                        />
+                      </>
+                    ) : null}
+                    <AdminButton
+                      label={
+                        saving
+                          ? "Saving…"
+                          : person.phone
+                            ? `Save ${chosenLabel}`
+                            : alreadyAssigned
+                              ? (sameRole ? `Keep ${chosenLabel}` : `Change to ${chosenLabel}`)
+                              : `Assign ${chosenLabel}`
+                      }
+                      disabled={saving || (!person.phone && sameRole)}
+                      onPress={() => { save().catch(() => undefined); }}
+                    />
                     {canRemove ? (
                       <AdminButton
                         label={saving ? "Working…" : `Remove ${roleLabel(currentOffice || "", roles)}`}

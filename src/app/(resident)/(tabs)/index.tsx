@@ -7,6 +7,7 @@ import { HtmlBody } from "@/components/HtmlText";
 import { Icon } from "@/components/Icon";
 import { Note, Screen, Tile } from "@/components/Screen";
 import { loadAccount, loadAttention, loadNotices } from "@/lib/community";
+import { planDayLabel } from "@/lib/day";
 import { loadFeatures } from "@/lib/features";
 import { loadMyUpcomingEvents, type FeedPost } from "@/lib/feed";
 import {
@@ -82,10 +83,18 @@ export default function HomeScreen() {
   }, [router]));
 
   const visitors = attention?.waitingVisitors ?? [];
+  const plannedVisitors = attention?.plannedVisitors ?? [];
+  const plannedBookings = attention?.plannedBookings ?? [];
   const replies = attention?.waitingRequests ?? [];
   const openComplaints = attention?.openRequests ?? [];
-  const canComplain = Boolean(home && home.role !== "visitor" && home.flatNumber);
-  const activityQuiet = openComplaints.length === 0 && events.length === 0 && visitors.length === 0 && replies.length === 0;
+  const canComplain = Boolean(home && home.role !== "visitor" && (home.hasFlat || home.flatNumber));
+  const canInvite = canComplain;
+  const comingUp = plannedVisitors.length > 0 || plannedBookings.length > 0 || events.length > 0;
+  const activityQuiet =
+    openComplaints.length === 0
+    && !comingUp
+    && visitors.length === 0
+    && replies.length === 0;
 
   async function closePile() {
     const ids = pile.map((notice) => notice.id);
@@ -98,7 +107,7 @@ export default function HomeScreen() {
 
   const actions = availableQuickActions({
     features,
-    canComplain,
+    canComplain: canInvite,
     selected: layout?.quickActions ?? null,
   });
 
@@ -125,9 +134,13 @@ export default function HomeScreen() {
         ) : null}
         {visitors.map((pass) => (
           <Pressable key={pass.id} onPress={() => router.push(`/(resident)/pass/${pass.id}`)} style={[ui.card, { borderLeftWidth: 3, borderLeftColor: colors.gold }]}>
-            <Text style={ui.label}>{pass.atGate ? "At the gate" : "Needs your answer"}</Text>
+            <Text style={ui.label}>{pass.atGate ? "At the gate" : "Approve visitor"}</Text>
             <Text style={ui.cardTitle}>{pass.name}</Text>
-            <Text style={ui.body}>{pass.purpose || "Visitor waiting for a decision"}</Text>
+            <Text style={ui.body}>
+              {pass.atGate
+                ? "Security says they are here. Let them in or send them away."
+                : pass.purpose || "Someone asked to visit your home."}
+            </Text>
           </Pressable>
         ))}
         {replies.map((item) => (
@@ -172,7 +185,37 @@ export default function HomeScreen() {
           <Empty title="No announcements" detail="Water, power, lift, and association notices appear here when the office publishes them." />
         ) : null}
 
-        {showActivity ? <SectionLabel title="My activity" /> : null}
+        {showActivity && comingUp ? <SectionLabel title="Coming up" /> : null}
+        {showActivity ? plannedVisitors.map((pass) => (
+          <Pressable key={`pass-${pass.id}`} onPress={() => router.push(`/(resident)/pass/${pass.id}`)} style={ui.card}>
+            <Text style={ui.label}>
+              {pass.raw === "inside" ? "Visitor inside" : "Gate pass"} · {planDayLabel(pass.date)}
+            </Text>
+            <Text style={ui.cardTitle}>{pass.name}</Text>
+            <Text style={ui.meta}>{pass.purpose || pass.status}</Text>
+          </Pressable>
+        )) : null}
+        {showActivity ? plannedBookings.map((booking) => (
+          <Pressable key={`book-${booking.id}`} onPress={() => router.push("/(resident)/amenities")} style={ui.card}>
+            <Text style={ui.label}>
+              Amenity · {planDayLabel(booking.when)}{booking.slot ? ` · ${booking.slot}` : ""}
+            </Text>
+            <Text style={ui.cardTitle}>{booking.space}</Text>
+            <Text style={ui.meta}>{booking.status}</Text>
+          </Pressable>
+        )) : null}
+        {showActivity ? events.map((event) => (
+          <Pressable key={event.id} onPress={() => router.push(`/(resident)/post/${event.id}`)} style={ui.card}>
+            <Text style={ui.label}>
+              Event{event.startsOn || event.startsLabel
+                ? ` · ${planDayLabel(event.startsOn) || event.startsLabel}`
+                : ""}
+            </Text>
+            <HtmlBody html={event.body} lines={2} style={ui.cardTitle} />
+          </Pressable>
+        )) : null}
+
+        {showActivity && openComplaints.length ? <SectionLabel title="Open complaints" /> : null}
         {showActivity ? openComplaints.map((item) => (
           <Pressable key={item.id} onPress={() => router.push(`/(resident)/request/${item.id}`)} style={ui.card}>
             <Text style={ui.label}>{item.category} · {item.status}</Text>
@@ -180,14 +223,11 @@ export default function HomeScreen() {
             <Text style={ui.meta}>{item.date}</Text>
           </Pressable>
         )) : null}
-        {showActivity ? events.map((event) => (
-          <Pressable key={event.id} onPress={() => router.push(`/(resident)/post/${event.id}`)} style={ui.card}>
-            <Text style={ui.label}>You're going{event.startsLabel ? ` · ${event.startsLabel}` : ""}</Text>
-            <HtmlBody html={event.body} lines={2} style={ui.cardTitle} />
-          </Pressable>
-        )) : null}
         {showActivity && home && !attention?.incomplete && activityQuiet && !home.needsClaim ? (
-          <Empty title="Nothing in progress" detail="Open complaints and events you have registered for will show up here." />
+          <Empty
+            title="Nothing planned"
+            detail="Gate passes, amenity bookings, events you are going to, and open complaints show up here."
+          />
         ) : null}
 
         {message ? (
@@ -222,7 +262,7 @@ export default function HomeScreen() {
             shadowOffset: { width: 0, height: 4 },
           }}
         >
-          <Icon name={actionsOpen ? "close" : "more"} color={colors.onButton} size={22} />
+          <Icon name={actionsOpen ? "close" : "plus"} color={colors.onButton} size={22} />
         </Pressable>
       ) : null}
 
