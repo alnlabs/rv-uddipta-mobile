@@ -8,9 +8,9 @@ import { passShareMessage, passShareUrl } from "@/lib/site";
 import { colors, fonts, ui } from "@/theme";
 
 const STATUS: Record<string, string> = {
-  pending_approval: "Waiting for you",
-  expected: "Expected",
-  waiting: "Waiting at the gate",
+  pending_approval: "Needs approval",
+  expected: "Ready for the gate",
+  waiting: "At the gate",
   inside: "Inside",
   left: "Left",
   refused: "Refused",
@@ -86,7 +86,7 @@ export default function PassScreen() {
           <Text style={ui.label}>{STATUS[String(pass.status)] || String(pass.status)}</Text>
           {showQr ? (
             <>
-              <Text style={[ui.body, { textAlign: "center", marginBottom: 8 }]}>Show this QR at the gate</Text>
+              <Text style={[ui.body, { textAlign: "center", marginBottom: 8 }]}>Show this QR at the gate, or share the link so the guest can open it</Text>
               <PassQr code={String(pass.code)} />
             </>
           ) : null}

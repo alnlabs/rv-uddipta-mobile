@@ -1,7 +1,17 @@
-export const siteUrl = (process.env.EXPO_PUBLIC_SITE_URL || "https://uddipta.vercel.app").replace(/\/$/, "");
+const DEFAULT_SITE = "https://uddipta.vercel.app";
 
+export function siteBaseUrl() {
+  return String(process.env.EXPO_PUBLIC_SITE_URL || DEFAULT_SITE).replace(/\/$/, "");
+}
+
+/** Public guest page URL — opens QR for security to scan. */
 export function passShareUrl(code: string) {
-  return `${siteUrl}/pass/${String(code).trim().toUpperCase()}`;
+  const normalized = String(code).trim().toUpperCase();
+  return `${siteBaseUrl()}/pass/${normalized}`;
+}
+
+export function passShareCode(code: string) {
+  return String(code).trim().toUpperCase();
 }
 
 export function passShareMessage(input: {
@@ -10,7 +20,8 @@ export function passShareMessage(input: {
   home: string
   date?: string
 }) {
-  const link = passShareUrl(input.code);
+  const code = passShareCode(input.code);
+  const link = passShareUrl(code);
   const when = input.date ? ` on ${input.date}` : "";
-  return `Visitor pass for ${input.visitorName} at RV Uddiipta ${input.home}${when}.\nShow the QR at the gate (or code ${input.code}):\n${link}`;
+  return `Visitor pass for ${input.visitorName} at RV Uddiipta ${input.home}${when}.\nOpen this link and show the QR at the gate:\n${link}\nOr show code ${code}.`;
 }

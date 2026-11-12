@@ -3,7 +3,7 @@ import { Pressable, Share, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { createPass, loadPasses } from "@/lib/community";
-import { passShareMessage } from "@/lib/site";
+import { passShareMessage, passShareUrl } from "@/lib/site";
 import { indiaDay } from "@/lib/day";
 import { colors, ui } from "@/theme";
 
@@ -50,7 +50,7 @@ export default function InviteScreen() {
           home: created.home,
           date: created.date,
         });
-        await Share.share({ message: text }).catch(() => undefined);
+        await Share.share({ message: text, url: passShareUrl(created.code) }).catch(() => undefined);
         router.replace(`/(resident)/pass/${created.id}`);
       } else {
         setMessage("Pass created. Open visitor history to see it.");
@@ -64,7 +64,7 @@ export default function InviteScreen() {
 
   return (
     <Screen title="Invite a visitor">
-      <Text style={ui.body}>Creates a QR pass they show at the gate. They do not get an account. Share the link on WhatsApp after create.</Text>
+      <Text style={ui.body}>Creates a visitor pass. After create, share the text link — the guest opens it to show a QR at the gate. They do not get an account.</Text>
       <View style={ui.card}>
         <TextInput value={name} onChangeText={setName} placeholder="Visitor name" placeholderTextColor={colors.placeholder} style={ui.field} />
         <TextInput value={phone} onChangeText={setPhone} placeholder="Phone" placeholderTextColor={colors.placeholder} style={ui.field} keyboardType="phone-pad" />
