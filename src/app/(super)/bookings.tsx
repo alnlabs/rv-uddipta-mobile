@@ -8,15 +8,8 @@ import {
   AdminSheet,
 } from "@/components/AdminUi";
 import { Note } from "@/components/Screen";
+import { planDayLabel } from "@/lib/day";
 import { loadAmenities, type AmenityBooking } from "@/lib/office";
-
-function dayLabel(value: string) {
-  return new Date(`${value}T12:00:00`).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 export default function SuperBookingsScreen() {
   const [pending, setPending] = useState<AmenityBooking[]>([]);
@@ -52,7 +45,7 @@ export default function SuperBookingsScreen() {
               kicker={`${row.status} · ${row.home}`}
               title={row.space}
               lines={[
-                `${dayLabel(row.when)} · ${row.slot}`,
+                `${planDayLabel(row.when) || row.when} · ${row.slot}`,
                 row.who || "",
               ].filter(Boolean)}
               last={index === pending.length - 1}

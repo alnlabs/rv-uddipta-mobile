@@ -5,6 +5,7 @@ import { CallButton } from "@/components/CallButton";
 import { Note, Screen } from "@/components/Screen";
 import { lookupPass, setGateStatus } from "@/lib/community";
 import { lookupWorkforceCode } from "@/lib/business";
+import { planDayLabel } from "@/lib/day";
 import { colors, fonts, ui } from "@/theme";
 
 const STATUS: Record<string, string> = {
@@ -127,7 +128,7 @@ export default function CheckScreen() {
           <Text style={ui.label}>{STATUS[String(result.status)] || String(result.status)}</Text>
           <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 28, fontWeight: "600", letterSpacing: 2 }}>{result.code}</Text>
           <Text style={ui.cardTitle}>{result.name}</Text>
-          <Text style={ui.body}>{result.home} · {result.date}</Text>
+          <Text style={ui.body}>{result.home} · {planDayLabel(String(result.date || "")) || result.date}</Text>
           <Text style={ui.body}>{result.purpose}</Text>
           {result.answer === "allowed" ? <Text style={ui.body}>The resident allowed this visitor in.</Text> : null}
           {!ok && result.status === "waiting" && result.answer !== "allowed" ? (

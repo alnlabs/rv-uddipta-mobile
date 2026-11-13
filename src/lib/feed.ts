@@ -1,5 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import { indiaDay, planDayLabel } from "@/lib/day";
+import { indiaDay, planDayLabel, relativeTime } from "@/lib/day";
 import { supabase } from "@/lib/supabase";
 
 export type Access = "none" | "view" | "manage";
@@ -150,9 +150,7 @@ export function dateLabel(value: string | null) {
 }
 
 function when(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return relativeTime(value);
 }
 
 function accessOf(value: unknown): Access {

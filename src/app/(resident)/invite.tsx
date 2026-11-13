@@ -4,23 +4,11 @@ import { useRouter } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { createPass, loadPasses } from "@/lib/community";
 import { passShareMessage, passShareUrl } from "@/lib/site";
-import { indiaDay } from "@/lib/day";
+import { indiaDay, planDayLabel } from "@/lib/day";
 import { colors, ui } from "@/theme";
 
 function dayOffset(days: number) {
   return indiaDay(days);
-}
-
-function dayLabel(value: string) {
-  const today = dayOffset(0);
-  const tomorrow = dayOffset(1);
-  if (value === today) return "Today";
-  if (value === tomorrow) return "Tomorrow";
-  return new Date(`${value}T12:00:00`).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
 }
 
 const PURPOSES = ["Guest", "Delivery", "Family", "Service"] as const;
@@ -48,7 +36,7 @@ export default function InviteScreen() {
           code: created.code,
           visitorName: created.name,
           home: created.home,
-          date: created.date,
+          date: planDayLabel(created.date) || created.date,
         });
         await Share.share({ message: text, url: passShareUrl(created.code) }).catch(() => undefined);
         router.replace(`/(resident)/pass/${created.id}`);
@@ -92,7 +80,7 @@ export default function InviteScreen() {
               onPress={() => setVisitOn(day)}
               style={[ui.button, { paddingVertical: 10, backgroundColor: visitOn === day ? colors.button : colors.white, borderWidth: 1, borderColor: colors.button }]}
             >
-              <Text style={[ui.buttonText, { fontSize: 13, color: visitOn === day ? colors.onButton : colors.button }]}>{dayLabel(day)}</Text>
+              <Text style={[ui.buttonText, { fontSize: 13, color: visitOn === day ? colors.onButton : colors.button }]}>{planDayLabel(day)}</Text>
             </Pressable>
           ))}
         </View>

@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Empty, TextButton } from "@/components/Blocks";
 import { Note, Screen } from "@/components/Screen";
 import { loadPasses } from "@/lib/community";
+import { planDayLabel } from "@/lib/day";
 import { fonts, ui } from "@/theme";
 
 export default function HistoryScreen() {
@@ -59,7 +60,7 @@ export default function HistoryScreen() {
 
       {passes.map((pass) => (
         <Pressable key={pass.id} onPress={() => router.push(`/(resident)/pass/${pass.id}`)} style={ui.card}>
-          <Text style={ui.label}>{pass.status} · {pass.date}</Text>
+          <Text style={ui.label}>{pass.status} · {planDayLabel(pass.date) || pass.date}</Text>
           <Text style={ui.cardTitle}>{pass.name}</Text>
           <Text style={ui.body}>{pass.code} · {pass.home}</Text>
         </Pressable>

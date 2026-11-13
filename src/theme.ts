@@ -50,7 +50,7 @@ export const ui = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingBottom: 28,
-    gap: 14,
+    gap: 12,
   },
   eyebrow: {
     color: colors.goldInk,
@@ -145,14 +145,14 @@ export const ui = StyleSheet.create({
   },
   surface: {
     backgroundColor: colors.white,
-    borderRadius: 22,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(15, 23, 42, 0.08)",
     shadowColor: "#0f172a",
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    shadowOpacity: 0.045,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   meta: {
     color: colors.muted,

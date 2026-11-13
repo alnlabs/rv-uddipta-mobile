@@ -3,19 +3,11 @@ import { Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { bookAmenity, loadAmenities } from "@/lib/office";
-import { indiaDay } from "@/lib/day";
+import { indiaDay, planDayLabel } from "@/lib/day";
 import { colors, ui } from "@/theme";
 
 function dayOffset(days: number) {
   return indiaDay(days);
-}
-
-function dayLabel(value: string) {
-  return new Date(`${value}T12:00:00`).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
 }
 
 export default function AmenitiesScreen() {
@@ -68,7 +60,7 @@ export default function AmenitiesScreen() {
         <View key={item.id} style={ui.card}>
           <Text style={ui.label}>{item.status}</Text>
           <Text style={ui.cardTitle}>{item.space}</Text>
-          <Text style={ui.body}>{dayLabel(item.when)} · {item.slot}</Text>
+          <Text style={ui.body}>{planDayLabel(item.when) || item.when} · {item.slot}</Text>
         </View>
       ))}
       {data?.canBook ? (
@@ -83,7 +75,7 @@ export default function AmenitiesScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {dates.map((day) => (
               <Pressable key={day} onPress={() => setStartsOn(day)} style={[ui.button, { paddingVertical: 10, backgroundColor: startsOn === day ? colors.button : colors.white, borderWidth: 1, borderColor: colors.button }]}>
-                <Text style={[ui.buttonText, { fontSize: 13, color: startsOn === day ? colors.onButton : colors.button }]}>{dayLabel(day)}</Text>
+                <Text style={[ui.buttonText, { fontSize: 13, color: startsOn === day ? colors.onButton : colors.button }]}>{planDayLabel(day)}</Text>
               </Pressable>
             ))}
           </View>

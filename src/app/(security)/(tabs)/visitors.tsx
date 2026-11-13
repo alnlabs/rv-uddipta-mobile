@@ -3,6 +3,7 @@ import { Pressable, Text } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Note, Screen } from "@/components/Screen";
 import { loadGatePasses } from "@/lib/community";
+import { planDayLabel } from "@/lib/day";
 import { ui } from "@/theme";
 
 const GROUPS = [
@@ -47,7 +48,7 @@ export default function GateVisitorsScreen() {
             <Text style={ui.cardTitle}>{pass.visitor_name}</Text>
             <Text style={ui.body}>
               {pass.flat_number} · {pass.code}
-              {pass.purpose ? ` · ${pass.purpose}` : ""} · {pass.visit_on}
+              {pass.purpose ? ` · ${pass.purpose}` : ""} · {planDayLabel(String(pass.visit_on || "")) || pass.visit_on}
             </Text>
           </Pressable>
         ));

@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import { indiaDay } from "@/lib/day";
+import { indiaDay, relativeTime } from "@/lib/day";
 import { htmlToPlain } from "@/lib/html";
 import { supabase } from "@/lib/supabase";
 import { type Account } from "@/lib/place";
@@ -61,11 +61,7 @@ function greeting(name: string) {
 }
 
 function when(value: string) {
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return relativeTime(value);
 }
 
 function dbError(error: { message: string } | null, fallback: string) {
@@ -522,15 +518,7 @@ export function serviceSnapshot(notices: Awaited<ReturnType<typeof loadNotices>>
   const newest = notices
     .filter((notice) => SERVICE_LINES.some((service) => service.pattern.test(htmlToPlain(`${notice.title} ${notice.body}`))))
     .sort((a, b) => b.at.localeCompare(a.at))[0];
-  const updated = newest
-    ? new Date(newest.at).toLocaleString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : null;
+  const updated = newest ? relativeTime(newest.at) : null;
   return { lines, updated };
 }
 

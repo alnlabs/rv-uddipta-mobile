@@ -211,6 +211,173 @@ function RolePicker({
   );
 }
 
+function CreateStaffModal({
+  open,
+  onClose,
+  roles,
+  createRole,
+  onChangeRole,
+  createPhone,
+  onChangePhone,
+  createPin,
+  onChangePin,
+  createName,
+  onChangeName,
+  createEmail,
+  onChangeEmail,
+  saving,
+  fieldStyle,
+  onSubmit,
+}: {
+  open: boolean
+  onClose: () => void
+  roles: OfficeRoleOption[]
+  createRole: string
+  onChangeRole: (value: string) => void
+  createPhone: string
+  onChangePhone: (value: string) => void
+  createPin: string
+  onChangePin: (value: string) => void
+  createName: string
+  onChangeName: (value: string) => void
+  createEmail: string
+  onChangeEmail: (value: string) => void
+  saving: boolean
+  fieldStyle: {
+    backgroundColor: string
+    borderWidth: number
+    borderColor: string
+    borderRadius: number
+    paddingHorizontal: number
+    paddingVertical: number
+    fontFamily: string
+    fontSize: number
+    color: string
+  }
+  onSubmit: () => void
+}) {
+  const insets = useSafeAreaInsets();
+  const sheetHeight = Math.round(Dimensions.get("window").height * 0.86);
+
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "flex-end" }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close create"
+          onPress={onClose}
+          style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+        />
+        <View
+          style={{
+            height: sheetHeight,
+            backgroundColor: ops.sheet,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            paddingTop: 14,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
+          <View style={{
+            paddingHorizontal: 16,
+            paddingBottom: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
+                Create staff
+              </Text>
+              <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
+                Phone + PIN for society roles. Email is optional.
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={onClose}
+              hitSlop={8}
+              style={{
+                minWidth: 64,
+                minHeight: 36,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: ops.line,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 12,
+                backgroundColor: ops.page,
+              }}
+            >
+              <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>
+                Close
+              </Text>
+            </Pressable>
+          </View>
+          <ScrollView
+            style={{ flex: 1, paddingHorizontal: 16 }}
+            contentContainerStyle={{ gap: 10, paddingBottom: 12 }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            <RolePicker
+              label="Type"
+              options={roles}
+              value={createRole}
+              onChange={onChangeRole}
+            />
+            <TextInput
+              value={createPhone}
+              onChangeText={onChangePhone}
+              keyboardType="phone-pad"
+              placeholder="Phone"
+              placeholderTextColor="#94a3b8"
+              style={fieldStyle}
+            />
+            <TextInput
+              value={createPin}
+              onChangeText={onChangePin}
+              keyboardType="number-pad"
+              secureTextEntry
+              placeholder="PIN (4–6 digits)"
+              placeholderTextColor="#94a3b8"
+              maxLength={6}
+              style={fieldStyle}
+            />
+            <TextInput
+              value={createName}
+              onChangeText={onChangeName}
+              placeholder="Name (optional)"
+              placeholderTextColor="#94a3b8"
+              style={fieldStyle}
+            />
+            <TextInput
+              value={createEmail}
+              onChangeText={onChangeEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Email (optional)"
+              placeholderTextColor="#94a3b8"
+              style={fieldStyle}
+            />
+          </ScrollView>
+          <View style={{ paddingHorizontal: 16, paddingTop: 10, gap: 8 }}>
+            <AdminButton
+              label={saving ? "Creating…" : `Create ${roleLabel(createRole, roles)}`}
+              disabled={saving || !createPhone.trim() || createPin.replace(/\D/g, "").length < 4}
+              onPress={onSubmit}
+            />
+            <AdminButton label="Cancel" secondary onPress={onClose} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function PeopleRolesHelpModal({
   open,
   onClose,
@@ -586,9 +753,8 @@ export function RolesAssign({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <AdminButton
             compact
-            label={createOpen ? "Close" : "Create"}
-            secondary={createOpen}
-            onPress={() => setCreateOpen((open) => !open)}
+            label="Create"
+            onPress={() => setCreateOpen(true)}
           />
           <Pressable
             accessibilityRole="button"
@@ -612,86 +778,43 @@ export function RolesAssign({
         </View>
       )}
       toolbar={(
-        <View style={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Chips
-                compact
-                scroll
-                options={[
-                  { value: "office", label: "With role" },
-                  { value: "security", label: "Security" },
-                  { value: "staff", label: "Staff" },
-                  { value: "facility", label: "Facility" },
-                  { value: "homes", label: "Homes" },
-                  { value: "all", label: "All" },
-                ]}
-                value={filter}
-                onChange={(value) => setFilter(value as "all" | "office" | "security" | "staff" | "facility" | "homes")}
-              />
-            </View>
-          </View>
-          {createOpen ? (
-            <View style={{
-              backgroundColor: ops.sheet,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: ops.line,
-              padding: 12,
-              gap: 8,
-            }}
-            >
-              <RolePicker
-                label="Type"
-                options={roles}
-                value={createRole}
-                onChange={setCreateRole}
-              />
-              <TextInput
-                value={createPhone}
-                onChangeText={setCreatePhone}
-                keyboardType="phone-pad"
-                placeholder="Phone"
-                placeholderTextColor="#94a3b8"
-                style={fieldStyle}
-              />
-              <TextInput
-                value={createPin}
-                onChangeText={setCreatePin}
-                keyboardType="number-pad"
-                secureTextEntry
-                placeholder="PIN (4–6 digits)"
-                placeholderTextColor="#94a3b8"
-                maxLength={6}
-                style={fieldStyle}
-              />
-              <TextInput
-                value={createName}
-                onChangeText={setCreateName}
-                placeholder="Name (optional)"
-                placeholderTextColor="#94a3b8"
-                style={fieldStyle}
-              />
-              <TextInput
-                value={createEmail}
-                onChangeText={setCreateEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder="Email (optional)"
-                placeholderTextColor="#94a3b8"
-                style={fieldStyle}
-              />
-              <AdminButton
-                label={saving ? "Creating…" : `Create ${roleLabel(createRole, roles)}`}
-                disabled={saving || !createPhone.trim() || createPin.replace(/\D/g, "").length < 4}
-                onPress={() => { create().catch(() => undefined); }}
-              />
-            </View>
-          ) : null}
+        <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+          <Chips
+            compact
+            scroll
+            options={[
+              { value: "office", label: "With role" },
+              { value: "security", label: "Security" },
+              { value: "staff", label: "Staff" },
+              { value: "facility", label: "Facility" },
+              { value: "homes", label: "Homes" },
+              { value: "all", label: "All" },
+            ]}
+            value={filter}
+            onChange={(value) => setFilter(value as "all" | "office" | "security" | "staff" | "facility" | "homes")}
+          />
         </View>
       )}
     >
       <PeopleRolesHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <CreateStaffModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        roles={roles}
+        createRole={createRole}
+        onChangeRole={setCreateRole}
+        createPhone={createPhone}
+        onChangePhone={setCreatePhone}
+        createPin={createPin}
+        onChangePin={setCreatePin}
+        createName={createName}
+        onChangeName={setCreateName}
+        createEmail={createEmail}
+        onChangeEmail={setCreateEmail}
+        saving={saving}
+        fieldStyle={fieldStyle}
+        onSubmit={() => { create().catch(() => undefined); }}
+      />
       {header}
       {message ? <AdminBanner text={message} tone={tone} /> : null}
       {ready && visible.length === 0 ? <AdminEmpty title="No matching people" /> : null}

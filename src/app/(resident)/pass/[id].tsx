@@ -4,6 +4,7 @@ import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { PassQr } from "@/components/PassQr";
 import { Note, Screen } from "@/components/Screen";
 import { answerArrival, cancelPass, decidePass, loadPass } from "@/lib/community";
+import { planDayLabel } from "@/lib/day";
 import { passShareMessage, passShareUrl } from "@/lib/site";
 import { colors, fonts, ui } from "@/theme";
 
@@ -57,7 +58,7 @@ export default function PassScreen() {
       code: String(pass.code),
       visitorName: String(pass.visitor_name),
       home: String(pass.flat_number || ""),
-      date: String(pass.visit_on || ""),
+      date: planDayLabel(String(pass.visit_on || "")) || String(pass.visit_on || ""),
     });
     await Share.share({ message: text, url: passShareUrl(String(pass.code)) }).catch(() => undefined);
   }
@@ -68,7 +69,7 @@ export default function PassScreen() {
       code: String(pass.code),
       visitorName: String(pass.visitor_name),
       home: String(pass.flat_number || ""),
-      date: String(pass.visit_on || ""),
+      date: planDayLabel(String(pass.visit_on || "")) || String(pass.visit_on || ""),
     });
     const phone = String(pass.visitor_phone || "").replace(/\D/g, "");
     const target = phone
@@ -92,7 +93,7 @@ export default function PassScreen() {
           ) : null}
           <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 32, fontWeight: "600", letterSpacing: 3, textAlign: "center", marginTop: 12 }}>{pass.code}</Text>
           <Text style={ui.cardTitle}>{pass.visitor_name}</Text>
-          <Text style={ui.body}>{pass.flat_number} · {pass.visit_on}</Text>
+          <Text style={ui.body}>{pass.flat_number} · {planDayLabel(String(pass.visit_on || "")) || pass.visit_on}</Text>
           {pass.purpose ? <Text style={ui.body}>{pass.purpose}</Text> : null}
           {pass.visitor_phone ? <Text style={ui.body}>{pass.visitor_phone}</Text> : null}
           {pass.host_answer === "allowed" ? <Text style={ui.body}>You allowed this visitor in.</Text> : null}

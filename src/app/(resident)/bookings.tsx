@@ -9,15 +9,8 @@ import {
   saveAmenityHours,
   type AmenityBooking,
 } from "@/lib/office";
+import { planDayLabel } from "@/lib/day";
 import { colors, ui } from "@/theme";
-
-function dayLabel(value: string) {
-  return new Date(`${value}T12:00:00`).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 export default function BookingsScreen() {
   const [pending, setPending] = useState<AmenityBooking[]>([]);
@@ -67,7 +60,7 @@ export default function BookingsScreen() {
 
   function askDecide(row: AmenityBooking, status: "confirmed" | "refused") {
     if (status === "refused") {
-      Alert.alert("Refuse this booking?", `${row.space} · ${dayLabel(row.when)} · ${row.slot}`, [
+      Alert.alert("Refuse this booking?", `${row.space} · ${planDayLabel(row.when) || row.when} · ${row.slot}`, [
         { text: "Cancel", style: "cancel" },
         { text: "Refuse", style: "destructive", onPress: () => decide(row.id, "refused") },
       ]);
@@ -106,7 +99,7 @@ export default function BookingsScreen() {
           <Panel key={row.id}>
             <Text style={ui.label}>{row.space}{row.overdue ? " · Past date" : ""}</Text>
             <Text style={ui.cardTitle}>{row.who || row.home || "Resident"}</Text>
-            <Text style={ui.body}>{dayLabel(row.when)} · {row.slot}</Text>
+            <Text style={ui.body}>{planDayLabel(row.when) || row.when} · {row.slot}</Text>
             {row.home ? <Text style={ui.meta}>{row.home}</Text> : null}
             <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
               <Pressable disabled={Boolean(busyId)} onPress={() => askDecide(row, "confirmed")} style={[ui.button, { flex: 1 }]}>

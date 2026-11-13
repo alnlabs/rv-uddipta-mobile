@@ -90,31 +90,55 @@ export default function FeedTabScreen() {
       showBack={false}
       onRefresh={load}
       action={canPost ? (
-        <TextButton label="Write a post" onPress={() => router.push("/(resident)/post/new?kind=update")} />
+        <TextButton label="Write" onPress={() => router.push("/(resident)/post/new?kind=update")} />
       ) : undefined}
     >
-      <Text style={ui.body}>Notices, neighbour posts, events, and polls in one place.</Text>
-      <Chips options={filters} value={activeFilter} onChange={(value) => setFilter(value as Filter)} />
+      <View style={{ gap: 8, marginBottom: 2 }}>
+        <Text style={[ui.body, { fontSize: 14, lineHeight: 20 }]}>
+          Notices, neighbour posts, events, and polls.
+        </Text>
+        <Chips
+          options={filters}
+          value={activeFilter}
+          onChange={(value) => setFilter(value as Filter)}
+          compact
+          scroll
+        />
+      </View>
+
       {message ? <Banner text={message} /> : null}
       {ready && !available && visibleNotices.length === 0 ? <Empty title="Feed unavailable" detail="The feed is not available on your account." /> : null}
-      {ready && available && empty ? <Empty title="Nothing here yet" detail="Posts and notices in this view will show up as cards." /> : null}
-      {visibleNotices.map((notice) => (
-        <Pressable
-          key={`notice-${notice.id}`}
-          onPress={() => router.push(`/(resident)/notice/${notice.id}`)}
-          style={[ui.card, { borderLeftWidth: 3, borderLeftColor: notice.important ? colors.goldInk : colors.line }]}
-        >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-            <Text style={ui.label}>{notice.important ? "Important" : notice.label}</Text>
-            <Text style={ui.meta}>{notice.date}</Text>
-          </View>
-          <Text style={ui.cardTitle}>{notice.title}</Text>
-          {notice.body ? <HtmlBody html={notice.body} lines={2} /> : null}
-        </Pressable>
-      ))}
-      {visiblePosts.map((post) => (
-        <PostCard key={post.id} post={post} onPress={() => router.push(`/(resident)/post/${post.id}`)} />
-      ))}
+      {ready && available && empty ? <Empty title="Nothing here yet" detail="Posts and notices in this view will show up here." /> : null}
+
+      <View style={{ gap: 10 }}>
+        {visibleNotices.map((notice) => (
+          <Pressable
+            key={`notice-${notice.id}`}
+            onPress={() => router.push(`/(resident)/notice/${notice.id}`)}
+            style={[
+              ui.surface,
+              {
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                gap: 4,
+                borderLeftWidth: 3,
+                borderLeftColor: notice.important ? colors.goldInk : colors.gold,
+                overflow: "hidden",
+              },
+            ]}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <Text style={[ui.label, { letterSpacing: 1 }]}>{notice.important ? "Important" : notice.label}</Text>
+              <Text style={ui.meta}>{notice.date}</Text>
+            </View>
+            <Text style={[ui.cardTitle, { fontSize: 16, lineHeight: 21 }]}>{notice.title}</Text>
+            {notice.body ? <HtmlBody html={notice.body} lines={2} /> : null}
+          </Pressable>
+        ))}
+        {visiblePosts.map((post) => (
+          <PostCard key={post.id} post={post} onPress={() => router.push(`/(resident)/post/${post.id}`)} />
+        ))}
+      </View>
     </Screen>
   );
 }
