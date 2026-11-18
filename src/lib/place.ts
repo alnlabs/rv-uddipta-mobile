@@ -68,6 +68,7 @@ export function placesForAccount(account: Pick<Account, "role" | "superAdmin" | 
     places.add("home");
   }
   if (role === "staff" || role === "facility" || role === "admin") places.add("work");
+  // Builder (default repairs owner) keeps home; jobs live under /(resident)/jobs via Admin.
   if (role === "security") places.add("gate");
 
   return [...places];

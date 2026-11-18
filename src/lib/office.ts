@@ -11,6 +11,15 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
   return data as T;
 }
 
+export async function canManageArea(area: string) {
+  try {
+    const data = await rpc<boolean>("can_manage_area", { p_area: area });
+    return Boolean(data);
+  } catch {
+    return false;
+  }
+}
+
 export async function loadRegistration() {
   return rpc<{
     flatNumber: string | null
@@ -474,7 +483,21 @@ export type DeskJob = {
   assigneeRole?: string | null
   frequency?: string | null
   frequencyLabel?: string | null
+  societyTaskId?: number | null
+  workKey?: string | null
+  workLabel?: string | null
+  holderIds?: string[]
   who: string
+};
+
+export type ActiveSocietyWork = {
+  id: number
+  key: string
+  label: string
+  summary: string
+  duration: string
+  suggestedRole?: string | null
+  holderIds?: string[]
 };
 
 export const TASK_ROLES = [
@@ -538,8 +561,9 @@ export async function loadOfficeDeskSummary(options: {
 export async function loadJobs() {
   return rpc<{
     canManage: boolean
-    people: { id: string; name: string; onDuty: boolean }[]
+    people: { id: string; name: string; role?: string; onDuty: boolean }[]
     jobs: DeskJob[]
+    work?: ActiveSocietyWork[]
   }>("list_jobs_desk");
 }
 
@@ -601,6 +625,7 @@ export async function openJob(input: {
   body?: string
   role?: string | null
   frequency?: string | null
+  taskKey?: string | null
 }) {
   return rpc<{ ok: boolean; message?: string }>("open_job", {
     title: input.title,
@@ -608,7 +633,12 @@ export async function openJob(input: {
     body: input.body || "",
     target_role: input.role || null,
     frequency: input.frequency || "once",
+    task_key: input.taskKey || null,
   });
+}
+
+export async function loadActiveSocietyWork() {
+  return rpc<ActiveSocietyWork[]>("list_active_society_work");
 }
 
 export async function updateJob(input: {

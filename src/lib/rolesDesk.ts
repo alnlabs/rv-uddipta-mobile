@@ -67,9 +67,29 @@ export const PEOPLE_ROLE_GUIDE: {
   tasks: string
 }[] = [
   {
+    title: "Work list",
+    reportsTo: "Society admin",
+    tasks: "Regular or temporary duties. Work can stand alone or be linked to a role.",
+  },
+  {
+    title: "Roles",
+    reportsTo: "Society admin",
+    tasks: "Each role has duties you can change anytime. Give people one or more roles.",
+  },
+  {
+    title: "Extra duty",
+    reportsTo: "On one person only",
+    tasks: "Additional work for that person, on top of duties from their roles.",
+  },
+  {
+    title: "Reminders",
+    reportsTo: "People with that duty; Keep informed goes to admins",
+    tasks: "Nudge people on time for a duty. Send due reminders from the Reminders tab.",
+  },
+  {
     title: "Main office (super)",
     reportsTo: "The people who set up the whole app",
-    tasks: "Switches big tools on or off, and chooses who is society admin.",
+    tasks: "Switches big tools on or off, chooses society admin, and can change display words (Labels).",
   },
   {
     title: "Society admin",

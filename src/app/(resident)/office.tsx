@@ -11,7 +11,7 @@ import {
 import { loadAccount, switchAccountRole } from "@/lib/community";
 import { featureOn, loadFeatures } from "@/lib/features";
 import { type Account } from "@/lib/place";
-import { loadOfficeDeskSummary, type OfficeDeskSummary } from "@/lib/office";
+import { canManageArea, loadOfficeDeskSummary, type OfficeDeskSummary } from "@/lib/office";
 import { fonts } from "@/theme";
 
 function countLabel(count: number) {
@@ -59,21 +59,23 @@ function heldOfficeRole(account: Account) {
     || null;
 }
 
-/** Society admin / facility — Admin tab opens controls directly. */
+/** Society admin / facility / repairs area owner — Admin tab opens controls. */
 export default function OfficeDeskScreen() {
   const router = useRouter();
   const [summary, setSummary] = useState<OfficeDeskSummary | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isFacility, setIsFacility] = useState(false);
+  const [canJobs, setCanJobs] = useState(false);
   const [features, setFeatures] = useState<string[] | null>(null);
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [person, enabled] = await Promise.all([
+      const [person, enabled, repairsDesk] = await Promise.all([
         loadAccount(),
         loadFeatures().catch(() => null),
+        canManageArea("repairs").catch(() => false),
       ]);
       if (person.superAdmin) {
         router.replace("/(super)");
@@ -93,15 +95,16 @@ export default function OfficeDeskScreen() {
       const holdsFacility = activeFacility || account.roles.some((item) => item.role === "facility");
       setIsAdmin(holdsAdmin);
       setIsFacility(holdsAdmin || holdsFacility);
+      setCanJobs(holdsAdmin || holdsFacility || repairsDesk);
       setFeatures(enabled);
 
-      if (!holdsAdmin && !holdsFacility) {
+      if (!holdsAdmin && !holdsFacility && !repairsDesk) {
         setSummary(null);
-        setMessage("No society admin or facility role on this account. Ask a super admin to assign it under Roles.");
+        setMessage("No society admin, facility, or repairs desk role on this account. Ask a super admin to assign it under Roles.");
         return;
       }
 
-      if (!activeAdmin && !activeFacility) {
+      if (!activeAdmin && !activeFacility && !repairsDesk) {
         setSummary(null);
         setMessage(
           officeRole
@@ -113,7 +116,7 @@ export default function OfficeDeskScreen() {
 
       const next = await loadOfficeDeskSummary({
         admin: activeAdmin || holdsAdmin,
-        facility: activeAdmin || activeFacility || holdsFacility,
+        facility: activeAdmin || activeFacility || holdsFacility || repairsDesk,
       });
       setSummary(next);
       setMessage("");
@@ -150,7 +153,7 @@ export default function OfficeDeskScreen() {
       label: "Tasks",
       value: summary ? countLabel(summary.openJobs) : "—",
       href: "/(resident)/jobs",
-      show: (isAdmin || isFacility) && featureOn(features, "maintenance"),
+      show: canJobs && featureOn(features, "maintenance"),
     },
   ].filter((item) => item.show).slice(0, 4);
 

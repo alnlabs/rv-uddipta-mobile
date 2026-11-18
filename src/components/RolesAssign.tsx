@@ -12,6 +12,7 @@ import {
 } from "@/components/AdminUi";
 import { Chips } from "@/components/Blocks";
 import { Loading } from "@/components/Screen";
+import { SocietyCatalogPanels } from "@/components/SocietyCatalogPanels";
 import {
   assignOfficeRole,
   clearOfficeRole,
@@ -22,7 +23,11 @@ import {
   type OfficeRoleOption,
   type RolePerson,
 } from "@/lib/rolesDesk";
+import { LABEL_DEFAULTS, t } from "@/lib/labelDefaults";
+import { loadSocietyLabels } from "@/lib/societyCatalog";
 import { fonts } from "@/theme";
+
+type TeamTab = "people" | "work" | "roles" | "areas" | "reminders";
 
 const OFFICE_ROLES = new Set(["admin", "builder", "committee", "facility", "staff", "security"]);
 const HOME_ROLES = new Set(["owner", "co_owner", "tenant"]);
@@ -228,6 +233,7 @@ function CreateStaffModal({
   saving,
   fieldStyle,
   onSubmit,
+  labels,
 }: {
   open: boolean
   onClose: () => void
@@ -255,6 +261,7 @@ function CreateStaffModal({
     color: string
   }
   onSubmit: () => void
+  labels: Record<string, string>
 }) {
   const insets = useSafeAreaInsets();
   const sheetHeight = Math.round(Dimensions.get("window").height * 0.86);
@@ -289,15 +296,15 @@ function CreateStaffModal({
           >
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
-                Create staff
+                {t(labels, "create_staff")}
               </Text>
               <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
-                Phone + PIN for society roles. Email is optional.
+                {t(labels, "create_staff_help")}
               </Text>
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t(labels, "close")}
               onPress={onClose}
               hitSlop={8}
               style={{
@@ -313,7 +320,7 @@ function CreateStaffModal({
               }}
             >
               <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>
-                Close
+                {t(labels, "close")}
               </Text>
             </Pressable>
           </View>
@@ -324,7 +331,7 @@ function CreateStaffModal({
             nestedScrollEnabled
           >
             <RolePicker
-              label="Type"
+              label={t(labels, "type")}
               options={roles}
               value={createRole}
               onChange={onChangeRole}
@@ -381,9 +388,11 @@ function CreateStaffModal({
 function PeopleRolesHelpModal({
   open,
   onClose,
+  labels,
 }: {
   open: boolean
   onClose: () => void
+  labels: Record<string, string>
 }) {
   const insets = useSafeAreaInsets();
   const sheetHeight = Math.round(Dimensions.get("window").height * 0.82);
@@ -393,7 +402,7 @@ function PeopleRolesHelpModal({
       <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "flex-end" }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close help"
+          accessibilityLabel={t(labels, "close")}
           onPress={onClose}
           style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
         />
@@ -409,10 +418,10 @@ function PeopleRolesHelpModal({
         >
           <View style={{ paddingHorizontal: 16, paddingBottom: 10, gap: 4 }}>
             <Text style={{ color: ops.ink, fontFamily: fonts.display, fontSize: 18, fontWeight: "600" }}>
-              Who does what
+              {t(labels, "who_does_what")}
             </Text>
             <Text style={{ color: "#64748b", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
-              Use Create for the building team (phone and PIN). People who live in a home are added under Flats.
+              {t(labels, "help_who_does_what")}
             </Text>
           </View>
           <ScrollView
@@ -449,7 +458,7 @@ function PeopleRolesHelpModal({
             ))}
           </ScrollView>
           <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
-            <AdminButton label="Close" secondary onPress={onClose} />
+            <AdminButton label={t(labels, "close")} secondary onPress={onClose} />
           </View>
         </View>
       </View>
@@ -520,10 +529,16 @@ export function RolesAssign({
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [teamTab, setTeamTab] = useState<TeamTab>("people");
+  const [labels, setLabels] = useState<Record<string, string>>(LABEL_DEFAULTS);
 
   const load = useCallback(async () => {
     try {
-      const desk = await loadRolesDesk();
+      const [desk, nextLabels] = await Promise.all([
+        loadRolesDesk(),
+        loadSocietyLabels().catch(() => LABEL_DEFAULTS),
+      ]);
+      setLabels(nextLabels);
       setPeople(desk.people);
       setRoles(desk.roles);
       setCanAssignAdmin(desk.canAssignAdmin);
@@ -753,12 +768,12 @@ export function RolesAssign({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <AdminButton
             compact
-            label="Create"
+            label={t(labels, "create_staff")}
             onPress={() => setCreateOpen(true)}
           />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Who does what"
+            accessibilityLabel={t(labels, "who_does_what")}
             onPress={() => setHelpOpen(true)}
             hitSlop={6}
             style={{
@@ -778,25 +793,40 @@ export function RolesAssign({
         </View>
       )}
       toolbar={(
-        <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+        <View style={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
           <Chips
             compact
             scroll
             options={[
-              { value: "office", label: "With role" },
-              { value: "security", label: "Security" },
-              { value: "staff", label: "Staff" },
-              { value: "facility", label: "Facility" },
-              { value: "homes", label: "Homes" },
-              { value: "all", label: "All" },
+              { value: "people", label: t(labels, "people") },
+              { value: "work", label: t(labels, "work_list") },
+              { value: "roles", label: t(labels, "roles") },
+              { value: "areas", label: t(labels, "areas") },
+              { value: "reminders", label: t(labels, "reminders") },
             ]}
-            value={filter}
-            onChange={(value) => setFilter(value as "all" | "office" | "security" | "staff" | "facility" | "homes")}
+            value={teamTab}
+            onChange={(value) => setTeamTab(value as TeamTab)}
           />
+          {teamTab === "people" ? (
+            <Chips
+              compact
+              scroll
+              options={[
+                { value: "office", label: "With role" },
+                { value: "security", label: "Security" },
+                { value: "staff", label: "Staff" },
+                { value: "facility", label: "Facility" },
+                { value: "homes", label: "Homes" },
+                { value: "all", label: "All" },
+              ]}
+              value={filter}
+              onChange={(value) => setFilter(value as "all" | "office" | "security" | "staff" | "facility" | "homes")}
+            />
+          ) : null}
         </View>
       )}
     >
-      <PeopleRolesHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <PeopleRolesHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} labels={labels} />
       <CreateStaffModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -814,12 +844,18 @@ export function RolesAssign({
         saving={saving}
         fieldStyle={fieldStyle}
         onSubmit={() => { create().catch(() => undefined); }}
+        labels={labels}
       />
       {header}
-      {message ? <AdminBanner text={message} tone={tone} /> : null}
-      {ready && visible.length === 0 ? <AdminEmpty title="No matching people" /> : null}
+      {teamTab !== "people" ? (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+          <SocietyCatalogPanels tab={teamTab} onLabels={setLabels} />
+        </View>
+      ) : null}
+      {teamTab === "people" && message ? <AdminBanner text={message} tone={tone} /> : null}
+      {teamTab === "people" && ready && visible.length === 0 ? <AdminEmpty title="No matching people" /> : null}
 
-      {visible.length ? (
+      {teamTab === "people" && visible.length ? (
         <AdminSheet>
           {visible.map((person, index) => {
             const office = officeRoleOf(person);
@@ -958,6 +994,7 @@ export function RolesAssign({
                         onPress={() => { clear().catch(() => undefined); }}
                       />
                     ) : null}
+                    <SocietyCatalogPanels tab="extra" personUserId={person.userId} />
                   </View>
                 ) : null}
               </View>

@@ -1,17 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Banner, Empty, Panel, SectionLabel } from "@/components/Blocks";
+import { Banner, Chips, Empty, Panel, SectionLabel } from "@/components/Blocks";
 import { Screen } from "@/components/Screen";
 import {
   assignJob,
   frequencyLabel,
+  loadActiveSocietyWork,
   loadJobs,
   openJob,
   setOnDuty,
   TASK_FREQUENCIES,
   TASK_ROLES,
   updateJob,
+  type ActiveSocietyWork,
   type DeskJob,
 } from "@/lib/office";
 import { colors, ui } from "@/theme";
@@ -22,10 +24,17 @@ const JOB_STATUSES = [
   { value: "done", label: "Done" },
 ] as const;
 
-type Draft = { title: string; place: string; body: string; role: string; frequency: string };
+type Draft = {
+  title: string
+  place: string
+  body: string
+  role: string
+  frequency: string
+  taskKey: string
+};
 
 function emptyDraft(role = "staff", frequency = "daily"): Draft {
-  return { title: "", place: "", body: "", role, frequency };
+  return { title: "", place: "", body: "", role, frequency, taskKey: "" };
 }
 
 function jobDraft(job: DeskJob): Draft {
@@ -35,12 +44,14 @@ function jobDraft(job: DeskJob): Draft {
     body: job.body || "",
     role: job.assigneeRole || "staff",
     frequency: job.frequency || "once",
+    taskKey: "",
   };
 }
 
 export default function JobsScreen() {
   const [people, setPeople] = useState<{ id: string; name: string; onDuty: boolean }[]>([]);
   const [jobs, setJobs] = useState<DeskJob[]>([]);
+  const [workList, setWorkList] = useState<ActiveSocietyWork[]>([]);
   const [showDone, setShowDone] = useState(false);
   const [create, setCreate] = useState<Draft>(emptyDraft());
   const [edits, setEdits] = useState<Record<number, Draft>>({});
@@ -53,9 +64,13 @@ export default function JobsScreen() {
 
   const load = useCallback(async () => {
     try {
-      const data = await loadJobs();
+      const [data, work] = await Promise.all([
+        loadJobs(),
+        loadActiveSocietyWork().catch(() => []),
+      ]);
       setPeople(data.people);
       setJobs(data.jobs);
+      setWorkList(Array.isArray(work) ? work : Array.isArray(data.work) ? data.work : []);
       setMessage("");
     } catch (error) {
       setPeople([]);
@@ -176,10 +191,37 @@ export default function JobsScreen() {
           value={create.frequency}
           onChange={(frequency) => setCreate((current) => ({ ...current, frequency }))}
         />
+        {workList.length ? (
+          <View style={{ gap: 8 }}>
+            <Text style={ui.meta}>Work list</Text>
+            <Chips
+              scroll
+              value={create.taskKey || ""}
+              onChange={(taskKey) => {
+                const match = workList.find((item) => item.key === taskKey);
+                setCreate((current) => ({
+                  ...current,
+                  taskKey,
+                  title: current.title.trim() ? current.title : (match?.label || ""),
+                  role: match?.suggestedRole || current.role,
+                }));
+              }}
+              options={[
+                { value: "", label: "Custom" },
+                ...workList.map((item) => ({
+                  value: item.key,
+                  label: item.suggestedRole
+                    ? `${item.label} → ${item.suggestedRole}`
+                    : item.label,
+                })),
+              ]}
+            />
+          </View>
+        ) : null}
         <TextInput
           value={create.title}
           onChangeText={(title) => setCreate((current) => ({ ...current, title }))}
-          placeholder="Task title"
+          placeholder="Task title (optional if work selected)"
           placeholderTextColor={colors.placeholder}
           style={[ui.field, { backgroundColor: colors.page, borderWidth: 0 }]}
         />
@@ -201,9 +243,9 @@ export default function JobsScreen() {
         <Pressable
           disabled={Boolean(busyKey)}
           onPress={() => {
-            if (create.title.trim().length < 2) {
+            if (!create.taskKey && create.title.trim().length < 2) {
               setTone("error");
-              setMessage("Name the task.");
+              setMessage("Name the task or pick from the work list.");
               return;
             }
             run("open", async () => {
@@ -213,6 +255,7 @@ export default function JobsScreen() {
                 body: create.body,
                 role: create.role,
                 frequency: create.frequency,
+                taskKey: create.taskKey || null,
               });
               setCreate(emptyDraft(create.role, create.frequency));
               return result;
@@ -234,7 +277,17 @@ export default function JobsScreen() {
         <Empty title={showDone ? "No tasks yet" : "No open tasks"} detail="Tasks for a role show up here." />
       ) : null}
       {visibleJobs.map((job) => {
-        const assignee = assigneeDraft[job.id] ?? job.assigneeId ?? people[0]?.id ?? "";
+        const holders = new Set(
+          (job.holderIds || []).map(String).filter(Boolean),
+        );
+        const orderedPeople = holders.size
+          ? [
+            ...people.filter((person) => holders.has(person.id)),
+            ...people.filter((person) => !holders.has(person.id)),
+          ]
+          : people;
+        const preferredFirst = orderedPeople[0]?.id ?? "";
+        const assignee = assigneeDraft[job.id] ?? job.assigneeId ?? preferredFirst;
         const draft = edits[job.id] || jobDraft(job);
         const editing = openEditId === job.id;
         return (
@@ -245,6 +298,7 @@ export default function JobsScreen() {
               {` · ${job.frequencyLabel || frequencyLabel(job.frequency)}`}
             </Text>
             <Text style={ui.cardTitle}>{job.title}</Text>
+            {job.workLabel ? <Text style={ui.meta}>Work: {job.workLabel}</Text> : null}
             {job.body ? <Text style={ui.body}>{job.body}</Text> : null}
             <Text style={ui.meta}>{job.who}</Text>
 
@@ -337,25 +391,30 @@ export default function JobsScreen() {
               </View>
             ) : null}
 
-            {people.length ? (
+            {orderedPeople.length ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-                {people.map((person) => (
-                  <Pressable
-                    key={person.id}
-                    onPress={() => setAssigneeDraft((current) => ({ ...current, [job.id]: person.id }))}
-                    style={[
-                      ui.button,
-                      {
-                        paddingHorizontal: 12,
-                        backgroundColor: assignee === person.id ? colors.brandSoft : colors.white,
-                        borderWidth: 1,
-                        borderColor: colors.line,
-                      },
-                    ]}
-                  >
-                    <Text style={[ui.buttonText, { color: colors.ink, fontSize: 13 }]}>{person.name}</Text>
-                  </Pressable>
-                ))}
+                {orderedPeople.map((person) => {
+                  const preferred = holders.has(person.id);
+                  return (
+                    <Pressable
+                      key={person.id}
+                      onPress={() => setAssigneeDraft((current) => ({ ...current, [job.id]: person.id }))}
+                      style={[
+                        ui.button,
+                        {
+                          paddingHorizontal: 12,
+                          backgroundColor: assignee === person.id ? colors.brandSoft : colors.white,
+                          borderWidth: 1,
+                          borderColor: colors.line,
+                        },
+                      ]}
+                    >
+                      <Text style={[ui.buttonText, { color: colors.ink, fontSize: 13 }]}>
+                        {preferred ? "★ " : ""}{person.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             ) : null}
             <Pressable

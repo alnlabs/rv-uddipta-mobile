@@ -5,12 +5,14 @@ import { ResidentBar } from "@/components/AppBar";
 import { tabIcon } from "@/components/Icon";
 import { PageBusy } from "@/components/Screen";
 import { loadAccount } from "@/lib/community";
+import { canManageArea } from "@/lib/office";
 import { colors, tabBar } from "@/theme";
 
-function hasAdminAccess(account: Awaited<ReturnType<typeof loadAccount>>) {
+async function hasAdminAccess(account: Awaited<ReturnType<typeof loadAccount>>) {
   if (account.superAdmin) return false;
   if (account.role === "admin" || account.role === "facility") return true;
-  return account.roles.some((item) => item.role === "admin" || item.role === "facility");
+  if (account.roles.some((item) => item.role === "admin" || item.role === "facility")) return true;
+  return canManageArea("repairs");
 }
 
 export default function ResidentTabs() {
@@ -31,7 +33,7 @@ export default function ResidentTabs() {
           router.replace("/(super)");
           return;
         }
-        setShowAdmin(hasAdminAccess(account));
+        setShowAdmin(await hasAdminAccess(account));
         setBlocked(false);
       })
       .catch(() => {
