@@ -442,7 +442,7 @@ function mapForm(item: Record<string, unknown>): CommunityForm {
 
 export async function loadForms() {
   const { data, error } = await supabase.rpc("list_my_forms");
-  dbError(error, "Could not load queries.");
+  dbError(error, "Could not load enquiries.");
   const payload = (data ?? {}) as Record<string, unknown>;
   const { data: auth } = await supabase.auth.getUser();
   const userId = auth.user?.id;
@@ -488,7 +488,7 @@ export async function createQuery(input: {
       choices: question.choices || "",
     })),
   });
-  dbError(error, "Could not create that query.");
+  dbError(error, "Could not create that enquiry.");
   return data as { ok: boolean; id: number; message: string };
 }
 

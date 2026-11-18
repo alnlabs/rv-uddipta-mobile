@@ -379,7 +379,7 @@ export default function FormScreen() {
   const locked = !form || form.closed || !canSend || !flat;
 
   return (
-    <Screen title={form?.title || "Query"} onRefresh={load} busy={!ready && !message}>
+    <Screen title={form?.title || "Enquiry"} onRefresh={load} busy={!ready && !message}>
       {form?.note ? <HtmlBody html={form.note} /> : null}
       {message ? <Banner text={message} tone={tone} /> : null}
       {form?.closed ? <Text style={ui.body}>This form is closed.</Text> : null}

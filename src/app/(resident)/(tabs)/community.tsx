@@ -59,7 +59,7 @@ export default function CommunityScreen() {
       </View>
       <View style={{ flexDirection: "row", gap: 12 }}>
         {(!ready || featureOn(features, "forms")) ? (
-          <HubCard icon="form" title="Queries" detail="One answer per home" onPress={() => router.push("/(resident)/forms")} />
+          <HubCard icon="form" title="Enquiries" detail="One answer per home" onPress={() => router.push("/(resident)/forms")} />
         ) : null}
         {(!ready || featureOn(features, "announcements")) ? (
           <HubCard icon="bell" title="Notices" detail="From the office" onPress={() => router.push("/(resident)/notices")} />

@@ -38,7 +38,7 @@ export default function QueriesScreen() {
       setCanCreate(Boolean(result.canCreate));
       setMessage("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not load queries.");
+      setMessage(error instanceof Error ? error.message : "Could not load enquiries.");
     } finally {
       setReady(true);
     }
@@ -53,18 +53,18 @@ export default function QueriesScreen() {
   return (
     <Screen
       busy={!ready && !message}
-      title="Queries"
+      title="Enquiries"
       onRefresh={load}
       action={canCreate ? <TextButton label="New"
       onPress={() => router.push("/(resident)/query/new")} /> : undefined}
     >
       <Text style={ui.body}>Each home sends one answer. Sending again updates that answer.</Text>
       {message ? <Banner text={message} /> : null}
-      {ready && !available ? <Empty title="Queries unavailable" detail="Queries are not available on your account." /> : null}
+      {ready && !available ? <Empty title="Enquiries unavailable" detail="Enquiries are not available on your account." /> : null}
       {ready && available && forms.length === 0 ? (
         <Empty
-          title="No queries yet"
-          detail={canCreate ? "Tap New to ask every home a question." : "A query from the office will appear in its own card."}
+          title="No enquiries yet"
+          detail={canCreate ? "Tap New to ask every home a question." : "An enquiry from the office will appear in its own card."}
         />
       ) : null}
       {open.length ? <SectionLabel title="Waiting for your home" /> : null}

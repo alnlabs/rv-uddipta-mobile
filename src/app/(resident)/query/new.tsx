@@ -48,7 +48,7 @@ export default function NewQueryScreen() {
     if (saving) return;
     if (title.trim().length < 2) {
       setTone("error");
-      setMessage("Give the query a title.");
+      setMessage("Give the enquiry a title.");
       return;
     }
     if (questions.some((item) => item.label.trim().length < 2)) {
@@ -74,13 +74,13 @@ export default function NewQueryScreen() {
       router.replace(`/(resident)/form/${result.id}`);
     } catch (error) {
       setTone("error");
-      setMessage(error instanceof Error ? error.message : "Could not create that query.");
+      setMessage(error instanceof Error ? error.message : "Could not create that enquiry.");
       setSaving(false);
     }
   }
 
   return (
-    <Screen title="New query">
+    <Screen title="New enquiry">
       <Text style={ui.body}>Ask every home. One answer per flat.</Text>
       {message ? <Banner text={message} tone={tone} /> : null}
       <Panel>
@@ -166,7 +166,7 @@ export default function NewQueryScreen() {
         <Text style={[ui.buttonText, { color: colors.button }]}>Add question</Text>
       </Pressable>
       <Pressable disabled={saving} onPress={save} style={ui.button}>
-        <Text style={ui.buttonText}>{saving ? "Creating…" : "Create query"}</Text>
+        <Text style={ui.buttonText}>{saving ? "Creating…" : "Create enquiry"}</Text>
       </Pressable>
     </Screen>
   );
