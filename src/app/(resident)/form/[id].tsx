@@ -217,15 +217,15 @@ function FormResults({
   if (!people.length) {
     return (
       <Panel>
-        <Text style={ui.cardTitle}>No answers yet</Text>
-        <Text style={ui.body}>When homes send answers, they show up here question by question.</Text>
+        <Text style={ui.cardTitle}>No replies yet</Text>
+        <Text style={ui.body}>When homes send a reply, it shows up here question by question.</Text>
       </Panel>
     );
   }
 
   return (
     <View style={{ gap: 14 }}>
-      <SectionLabel title={`${people.length} ${people.length === 1 ? "home has" : "homes have"} answered`} />
+      <SectionLabel title={`${people.length} ${people.length === 1 ? "home has" : "homes have"} replied`} />
       {fields.map((field) => {
         const rows = people
           .map((answer) => ({
@@ -255,21 +255,27 @@ function FormResults({
           return (
             <Panel key={field.id}>
               <Text style={ui.cardTitle}>{field.label}</Text>
-              <Text style={ui.meta}>{rows.length} answered</Text>
+              <Text style={ui.meta}>{rows.length} replied</Text>
               {ordered.map((item) => {
                 const flats = (groups.get(item) ?? []).slice().sort(byFlat);
                 const share = rows.length ? Math.round((flats.length / rows.length) * 100) : 0;
+                const yoursHere = Boolean(flat && flats.includes(flat));
                 return (
                   <View key={item} style={{ gap: 6 }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                      <Text style={[ui.body, { color: colors.ink, flex: 1, fontWeight: "600" }]}>{item}</Text>
+                      <Text style={[ui.body, { color: colors.ink, flex: 1 }]}>
+                        {item}
+                        {yoursHere ? " · yours" : ""}
+                      </Text>
                       <Text style={ui.meta}>{flats.length} · {share}%</Text>
                     </View>
-                    <View style={{ height: 8, borderRadius: 999, backgroundColor: colors.line, overflow: "hidden" }}>
-                      <View style={{ width: `${share}%`, height: "100%", backgroundColor: colors.gold }} />
+                    <View style={{ height: 4, borderRadius: 999, backgroundColor: colors.line, overflow: "hidden" }}>
+                      <View style={{ width: `${share}%`, height: "100%", backgroundColor: "#94a3b8" }} />
                     </View>
                     {flats.length <= 8 ? (
-                      <Text style={ui.meta}>{flats.join(" · ")}</Text>
+                      <Text style={ui.meta}>
+                        {flats.map((itemFlat) => (itemFlat === flat ? `${itemFlat} (yours)` : itemFlat)).join(" · ")}
+                      </Text>
                     ) : null}
                   </View>
                 );
@@ -281,10 +287,10 @@ function FormResults({
         return (
           <Panel key={field.id}>
             <Text style={ui.cardTitle}>{field.label}</Text>
-            <Text style={ui.meta}>{rows.length} wrote an answer</Text>
+            <Text style={ui.meta}>{rows.length} wrote a reply</Text>
             {rows.sort((a, b) => byFlat(a.flat, b.flat)).map((row) => (
               <View key={row.flat} style={{ gap: 2 }}>
-                <Text style={ui.label}>{row.flat}{flat && row.flat === flat ? " · Your home" : ""}</Text>
+                <Text style={ui.meta}>{row.flat}{flat && row.flat === flat ? " · yours" : ""}</Text>
                 <HtmlBody html={row.value} style={{ color: colors.ink }} />
               </View>
             ))}
@@ -383,12 +389,12 @@ export default function FormScreen() {
       {form?.note ? <HtmlBody html={form.note} /> : null}
       {message ? <Banner text={message} tone={tone} /> : null}
       {form?.closed ? <Text style={ui.body}>This form is closed.</Text> : null}
-      {form?.submitted && !form.closed ? <Banner text="Your home already sent this. Sending again updates that answer." tone="ok" /> : null}
+      {form?.submitted && !form.closed ? <Banner text="Your home already sent this. Sending again updates that reply." tone="ok" /> : null}
       {!canSend && form ? <Banner text="You can look at this. You cannot change it." /> : null}
-      {!flat && form ? <Banner text="Link a home to this account before sending a form." /> : null}
-      {form?.homes != null ? <Text style={ui.meta}>{form.homes} homes have answered.</Text> : null}
+      {!flat && form ? <Banner text="Link a home to this account before sending." /> : null}
+      {form?.homes != null ? <Text style={ui.meta}>{form.homes} homes have replied.</Text> : null}
       {form?.results === "admins" && !form.community.length && form.homes == null ? (
-        <Banner text="Only admins can see every home’s answers on this form." />
+        <Banner text="Only admins can see every home’s replies on this enquiry." />
       ) : null}
       {form ? (
         <>
@@ -420,7 +426,7 @@ export default function FormScreen() {
           </Panel>
           {!locked ? (
             <Pressable onPress={send} disabled={saving} style={ui.button}>
-              <Text style={ui.buttonText}>{saving ? "Sending…" : form.submitted ? "Update answer" : "Send"}</Text>
+              <Text style={ui.buttonText}>{saving ? "Sending…" : form.submitted ? "Update reply" : "Send"}</Text>
             </Pressable>
           ) : null}
           {form.results === "community" || form.results === "link" || form.community.length > 0 ? (
