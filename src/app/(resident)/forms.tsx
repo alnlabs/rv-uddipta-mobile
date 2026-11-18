@@ -5,17 +5,13 @@ import { Banner, Empty, SectionLabel, TextButton } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
 import { Screen } from "@/components/Screen";
 import { loadForms, type CommunityForm } from "@/lib/feed";
-import { colors, fonts, ui } from "@/theme";
+import { ui } from "@/theme";
 
-function QueryRow({ form, onPress }: { form: CommunityForm; onPress: () => void }) {
+function EnquiryRow({ form, onPress }: { form: CommunityForm; onPress: () => void }) {
   const status = form.closed ? "Closed" : form.submitted ? "Sent" : "Open";
-  const tone = form.closed ? colors.muted : form.submitted ? colors.gold : colors.goldInk;
   return (
-    <Pressable onPress={onPress} style={[ui.surface, { padding: 16, gap: 8 }]}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tone }} />
-        <Text style={{ color: tone, fontFamily: fonts.display, fontSize: 12, fontWeight: "600" }}>{status}</Text>
-      </View>
+    <Pressable onPress={onPress} style={[ui.surface, { padding: 16, gap: 6 }]}>
+      <Text style={ui.meta}>{status}</Text>
       <Text style={ui.cardTitle}>{form.title}</Text>
       {form.note ? <HtmlBody html={form.note} lines={2} style={ui.meta} /> : null}
     </Pressable>
@@ -58,26 +54,26 @@ export default function QueriesScreen() {
       action={canCreate ? <TextButton label="New"
       onPress={() => router.push("/(resident)/query/new")} /> : undefined}
     >
-      <Text style={ui.body}>Each home sends one answer. Sending again updates that answer.</Text>
+      <Text style={ui.body}>Each home sends one reply. Sending again updates that reply.</Text>
       {message ? <Banner text={message} /> : null}
       {ready && !available ? <Empty title="Enquiries unavailable" detail="Enquiries are not available on your account." /> : null}
       {ready && available && forms.length === 0 ? (
         <Empty
           title="No enquiries yet"
-          detail={canCreate ? "Tap New to ask every home a question." : "An enquiry from the office will appear in its own card."}
+          detail={canCreate ? "Tap New to ask every home a question." : "An enquiry from the office will appear here."}
         />
       ) : null}
-      {open.length ? <SectionLabel title="Waiting for your home" /> : null}
+      {open.length ? <SectionLabel title="Open for you" /> : null}
       {open.map((form) => (
-        <QueryRow key={form.id} form={form} onPress={() => router.push(`/(resident)/form/${form.id}`)} />
+        <EnquiryRow key={form.id} form={form} onPress={() => router.push(`/(resident)/form/${form.id}`)} />
       ))}
-      {sent.length ? <SectionLabel title="Sent" /> : null}
+      {sent.length ? <SectionLabel title="Your replies" /> : null}
       {sent.map((form) => (
-        <QueryRow key={form.id} form={form} onPress={() => router.push(`/(resident)/form/${form.id}`)} />
+        <EnquiryRow key={form.id} form={form} onPress={() => router.push(`/(resident)/form/${form.id}`)} />
       ))}
       {closed.length ? <SectionLabel title="Closed" /> : null}
       {closed.map((form) => (
-        <QueryRow key={form.id} form={form} onPress={() => router.push(`/(resident)/form/${form.id}`)} />
+        <EnquiryRow key={form.id} form={form} onPress={() => router.push(`/(resident)/form/${form.id}`)} />
       ))}
     </Screen>
   );

@@ -213,103 +213,87 @@ function FormResults({
   community: FormCommunityAnswer[]
   flat: string | null
 }) {
-  const people = [...community].sort((a, b) => {
-    if (flat) {
-      if (a.flatNumber === flat) return -1;
-      if (b.flatNumber === flat) return 1;
-    }
-    return byFlat(a.flatNumber, b.flatNumber);
-  });
-
+  const people = [...community].sort((a, b) => byFlat(a.flatNumber, b.flatNumber));
   if (!people.length) {
     return (
       <Panel>
         <Text style={ui.cardTitle}>No replies yet</Text>
-        <Text style={ui.body}>When a home sends a reply, it will show here — one home at a time.</Text>
+        <Text style={ui.body}>When homes send replies, they show up here question by question.</Text>
       </Panel>
     );
   }
 
-  const summaries = fields.flatMap((field) => {
-    if (field.kind !== "choice" || !field.choices.length) return [];
-    const counts = new Map<string, number>();
-    for (const choice of field.choices) counts.set(choice, 0);
-    for (const person of people) {
-      const raw = (person.values[String(field.id)] || "").trim();
-      if (!raw) continue;
-      const match =
-        field.choices.find((choice) => choice.toLowerCase() === raw.toLowerCase()) ?? raw;
-      counts.set(match, (counts.get(match) ?? 0) + 1);
-    }
-    const line = [...counts.entries()]
-      .filter(([, count]) => count > 0)
-      .map(([label, count]) => `${label} ${count}`)
-      .join(" · ");
-    return line ? [{ id: field.id, label: field.label, line }] : [];
-  });
-
   return (
     <View style={{ gap: 14 }}>
-      <SectionLabel title={`${people.length} ${people.length === 1 ? "home has" : "homes have"} replied`} />
-      {summaries.length ? (
-        <Panel>
-          {summaries.map((item) => (
-            <Text key={item.id} style={ui.meta}>
-              {item.label}: {item.line}
-            </Text>
-          ))}
-        </Panel>
-      ) : null}
-      <Panel>
-        {people.map((person, index) => {
-          const yours = Boolean(flat && person.flatNumber === flat);
-          const rows = fields
-            .map((field) => ({
-              id: field.id,
-              label: field.label,
-              value: (person.values[String(field.id)] || "").trim(),
-            }))
-            .filter((row) => row.value);
+      <SectionLabel title={`${people.length} ${people.length === 1 ? "home has" : "homes have"} answered`} />
+      {fields.map((field) => {
+        const rows = people
+          .map((answer) => ({
+            flat: answer.flatNumber,
+            value: (answer.values[String(field.id)] || "").trim(),
+          }))
+          .filter((row) => row.value);
+        if (!rows.length) return null;
+
+        if (field.kind === "choice" || field.kind === "date") {
+          const groups = new Map<string, string[]>();
+          for (const row of rows) {
+            const key = field.kind === "choice"
+              ? (field.choices.find((choice) => choice.toLowerCase() === row.value.toLowerCase()) ?? row.value)
+              : row.value;
+            const flats = groups.get(key) ?? [];
+            flats.push(row.flat);
+            groups.set(key, flats);
+          }
+          const ordered = field.kind === "choice" && field.choices.length
+            ? [
+                ...field.choices.filter((choice) => groups.has(choice)),
+                ...[...groups.keys()].filter((key) => !field.choices.includes(key)),
+              ]
+            : [...groups.keys()].sort((a, b) => (groups.get(b)?.length ?? 0) - (groups.get(a)?.length ?? 0) || a.localeCompare(b));
+
           return (
-            <View
-              key={`${person.flatNumber}-${index}`}
-              style={{
-                gap: 8,
-                paddingTop: index === 0 ? 0 : 14,
-                borderTopWidth: index === 0 ? 0 : 1,
-                borderTopColor: colors.line,
-              }}
-            >
-              <Text style={[ui.body, { color: colors.ink }]}>
-                <Text style={{ fontFamily: fonts.display, fontWeight: "600" }}>
-                  {person.flatNumber || "Home"}
-                </Text>
-                {yours ? " · yours" : ""}
-              </Text>
-              {rows.length ? (
-                rows.map((row) => (
-                  <View key={row.id} style={{ gap: 2 }}>
-                    <Text style={ui.meta}>{row.label}</Text>
-                    <HtmlBody html={row.value} style={{ color: colors.ink }} />
+            <Panel key={field.id}>
+              <Text style={ui.cardTitle}>{field.label}</Text>
+              <Text style={ui.meta}>{rows.length} answered</Text>
+              {ordered.map((item) => {
+                const flats = (groups.get(item) ?? []).slice().sort(byFlat);
+                const share = rows.length ? Math.round((flats.length / rows.length) * 100) : 0;
+                return (
+                  <View key={item} style={{ gap: 6 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                      <Text style={[ui.body, { color: colors.ink, flex: 1, fontWeight: "600" }]}>{item}</Text>
+                      <Text style={ui.meta}>{flats.length} · {share}%</Text>
+                    </View>
+                    <View style={{ height: 8, borderRadius: 999, backgroundColor: colors.line, overflow: "hidden" }}>
+                      <View style={{ width: `${share}%`, height: "100%", backgroundColor: colors.gold }} />
+                    </View>
+                    {flats.length <= 8 ? (
+                      <Text style={ui.meta}>{flats.join(" · ")}</Text>
+                    ) : null}
                   </View>
-                ))
-              ) : (
-                <Text style={ui.meta}>Blank reply.</Text>
-              )}
-            </View>
+                );
+              })}
+            </Panel>
           );
-        })}
-      </Panel>
+        }
+
+        return (
+          <Panel key={field.id}>
+            <Text style={ui.cardTitle}>{field.label}</Text>
+            <Text style={ui.meta}>{rows.length} wrote an answer</Text>
+            {rows.sort((a, b) => byFlat(a.flat, b.flat)).map((row) => (
+              <View key={row.flat} style={{ gap: 2 }}>
+                <Text style={ui.label}>{row.flat}{flat && row.flat === flat ? " · Your home" : ""}</Text>
+                <HtmlBody html={row.value} style={{ color: colors.ink }} />
+              </View>
+            ))}
+          </Panel>
+        );
+      })}
     </View>
   );
 }
-
-const KIND_LABEL: Record<FormField["kind"], string> = {
-  text: "Short answer",
-  long: "Long answer",
-  date: "Date",
-  choice: "Pick one",
-};
 
 export default function FormScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -415,9 +399,11 @@ export default function FormScreen() {
           </Panel>
           <Panel>
             {form.fields.map((field, index) => (
-              <View key={field.id} style={{ gap: 8, paddingTop: index === 0 ? 0 : 12, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: colors.line }}>
-                <Text style={ui.label}>{field.label}{field.required ? " · Required" : ""}</Text>
-                <Text style={ui.meta}>{KIND_LABEL[field.kind]}</Text>
+              <View key={field.id} style={{ gap: 8, paddingTop: index === 0 ? 0 : 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: colors.line }}>
+                <Text style={[ui.body, { color: colors.ink, fontFamily: fonts.display, fontWeight: "600" }]}>
+                  {field.label}
+                  {field.required ? <Text style={ui.meta}> · required</Text> : null}
+                </Text>
                 <FieldAnswer
                   field={field}
                   value={values[field.id] || ""}
