@@ -307,6 +307,7 @@ export default function FormScreen() {
   const [tone, setTone] = useState<"error" | "ok">("error");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const load = useCallback(async (keepNote = false) => {
     try {
@@ -360,6 +361,7 @@ export default function FormScreen() {
       );
       setMessage(note);
       setTone("ok");
+      setEditing(false);
       await load(true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not send that.");
@@ -370,21 +372,55 @@ export default function FormScreen() {
   }
 
   const locked = !form || form.closed || !canSend || !flat;
+  const showRead = Boolean(form && (form.closed || (form.submitted && !editing)));
+  const showEdit = Boolean(form && !form.closed && (!form.submitted || editing) && canSend && flat);
 
   return (
     <Screen title={form?.title || "Enquiry"} onRefresh={load} busy={!ready && !message}>
       {form?.note ? <HtmlBody html={form.note} /> : null}
       {message ? <Banner text={message} tone={tone} /> : null}
-      {form?.closed ? <Text style={ui.body}>This form is closed.</Text> : null}
-      {form?.submitted && !form.closed ? <Banner text="Your home already sent this. Sending again updates that reply." tone="ok" /> : null}
       {!canSend && form ? <Banner text="You can look at this. You cannot change it." /> : null}
       {!flat && form ? <Banner text="Link a home to this account before sending." /> : null}
       {form?.homes != null ? <Text style={ui.meta}>{form.homes} homes have replied.</Text> : null}
       {form?.results === "admins" && !form.community.length && form.homes == null ? (
         <Banner text="Only admins can see every home’s replies on this enquiry." />
       ) : null}
-      {form ? (
+      {form && showRead ? (
+        <Panel>
+          <Text style={ui.meta}>
+            Your reply{form.closed ? " · closed" : ""}
+          </Text>
+          {form.fields.map((field, index) => (
+            <View
+              key={field.id}
+              style={{
+                gap: 4,
+                paddingTop: index === 0 ? 8 : 12,
+                borderTopWidth: index === 0 ? 0 : 1,
+                borderTopColor: colors.line,
+              }}
+            >
+              <Text style={ui.meta}>{field.label}</Text>
+              <HtmlBody
+                html={(values[field.id] || "").trim() || "—"}
+                style={{ color: colors.ink }}
+              />
+            </View>
+          ))}
+          {!form.closed && canSend && flat ? (
+            <Pressable onPress={() => setEditing(true)} style={[ui.button, { marginTop: 8 }]}>
+              <Text style={ui.buttonText}>Change reply</Text>
+            </Pressable>
+          ) : null}
+        </Panel>
+      ) : null}
+      {form && showEdit ? (
         <>
+          {form.submitted ? (
+            <Pressable onPress={() => setEditing(false)}>
+              <Text style={[ui.meta, { textAlign: "right" }]}>Cancel</Text>
+            </Pressable>
+          ) : null}
           <Panel>
             <Text style={ui.label}>Phone for this home</Text>
             <TextInput
@@ -413,15 +449,13 @@ export default function FormScreen() {
               </View>
             ))}
           </Panel>
-          {!locked ? (
-            <Pressable onPress={send} disabled={saving} style={ui.button}>
-              <Text style={ui.buttonText}>{saving ? "Sending…" : form.submitted ? "Update reply" : "Send"}</Text>
-            </Pressable>
-          ) : null}
-          {form.results === "community" || form.results === "link" || form.community.length > 0 ? (
-            <FormResults fields={form.fields} community={form.community} flat={flat} />
-          ) : null}
+          <Pressable onPress={send} disabled={saving} style={ui.button}>
+            <Text style={ui.buttonText}>{saving ? "Sending…" : form.submitted ? "Save reply" : "Send"}</Text>
+          </Pressable>
         </>
+      ) : null}
+      {form && (form.results === "community" || form.results === "link" || form.community.length > 0) ? (
+        <FormResults fields={form.fields} community={form.community} flat={flat} />
       ) : null}
     </Screen>
   );
