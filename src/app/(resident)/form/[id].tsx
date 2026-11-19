@@ -313,26 +313,35 @@ export default function FormScreen() {
       ) : null}
       {form ? (
         <>
-          <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-            <Text style={ui.meta}>Phone for this home</Text>
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="10-digit phone number"
-              placeholderTextColor={colors.placeholder}
-              keyboardType="phone-pad"
-              editable={!locked}
-              style={{
-                minHeight: 44,
-                paddingVertical: 10,
-                borderBottomWidth: 1,
-                borderBottomColor: "rgba(15, 23, 42, 0.18)",
-                fontFamily: fonts.body,
-                fontSize: 16,
-                color: colors.ink,
-              }}
-            />
-          </View>
+          {flat && phone.trim() ? (
+            <Text style={[ui.meta, { marginBottom: 8 }]}>
+              {form.submitted ? "Updating reply for" : "Replying as"}{" "}
+              <Text style={{ color: colors.ink, fontFamily: fonts.display, fontWeight: "600" }}>
+                {[flat, phone].filter(Boolean).join(" · ")}
+              </Text>
+            </Text>
+          ) : (
+            <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+              <Text style={ui.meta}>Phone for this home</Text>
+              <TextInput
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="10-digit phone number"
+                placeholderTextColor={colors.placeholder}
+                keyboardType="phone-pad"
+                editable={!locked}
+                style={{
+                  minHeight: 44,
+                  paddingVertical: 10,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "rgba(15, 23, 42, 0.18)",
+                  fontFamily: fonts.body,
+                  fontSize: 16,
+                  color: colors.ink,
+                }}
+              />
+            </View>
+          )}
           <View>
             {form.fields.map((field, index) => (
               <View
