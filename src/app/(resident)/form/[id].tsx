@@ -45,10 +45,6 @@ function FieldAnswer({
   locked: boolean
   onChange: (next: string) => void
 }) {
-  const filled = Boolean(value.trim());
-  const answerColor = "#047857";
-  const answerWash = "rgba(5, 150, 105, 0.12)";
-
   if (field.kind === "choice") {
     if (!field.choices.length) {
       return <Text style={ui.body}>This question has no options yet. Ask the office to add choices.</Text>;
@@ -68,14 +64,14 @@ function FieldAnswer({
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: active ? answerWash : colors.white,
+                backgroundColor: active ? "rgba(5, 150, 105, 0.12)" : colors.white,
                 borderWidth: 1,
                 borderColor: active ? "#059669" : "rgba(15, 23, 42, 0.14)",
               }}
             >
               <Text
                 style={{
-                  color: active ? answerColor : "#334155",
+                  color: active ? "#047857" : "#334155",
                   fontFamily: fonts.display,
                   fontSize: 14,
                   fontWeight: active ? "700" : "500",
@@ -101,15 +97,11 @@ function FieldAnswer({
         style={{
           minHeight: 44,
           paddingVertical: 10,
-          paddingHorizontal: filled ? 10 : 0,
           borderBottomWidth: 1,
-          borderBottomColor: filled ? "rgba(5, 150, 105, 0.45)" : "rgba(15, 23, 42, 0.18)",
-          borderRadius: filled ? 8 : 0,
-          backgroundColor: filled ? answerWash : "transparent",
+          borderBottomColor: "rgba(15, 23, 42, 0.18)",
           fontFamily: fonts.body,
           fontSize: 16,
-          fontWeight: filled ? "600" : "400",
-          color: filled ? answerColor : colors.ink,
+          color: colors.ink,
         }}
       />
     );
@@ -125,15 +117,11 @@ function FieldAnswer({
       style={{
         minHeight: field.kind === "long" ? 96 : 44,
         paddingVertical: 10,
-        paddingHorizontal: filled ? 10 : 0,
         borderBottomWidth: 1,
-        borderBottomColor: filled ? "rgba(5, 150, 105, 0.45)" : "rgba(15, 23, 42, 0.18)",
-        borderRadius: filled ? 8 : 0,
-        backgroundColor: filled ? answerWash : "transparent",
+        borderBottomColor: "rgba(15, 23, 42, 0.18)",
         fontFamily: fonts.body,
         fontSize: 16,
-        fontWeight: filled ? "600" : "400",
-        color: filled ? answerColor : colors.ink,
+        color: colors.ink,
         textAlignVertical: field.kind === "long" ? "top" : "center",
       }}
     />
