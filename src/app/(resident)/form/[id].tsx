@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useCallback, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Banner, Chips, Panel, SectionLabel } from "@/components/Blocks";
+import { Banner, Panel, SectionLabel } from "@/components/Blocks";
 import { HtmlBody } from "@/components/HtmlText";
 import { Screen } from "@/components/Screen";
 import {
@@ -34,135 +34,6 @@ function normalizeDate(raw: string) {
   return value;
 }
 
-function dateParts(value: string) {
-  const iso = normalizeDate(value);
-  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return { year: "", month: "", day: "" };
-  return { year: match[1], month: match[2], day: match[3] };
-}
-
-function DateAnswer({
-  value,
-  editable,
-  onChange,
-}: {
-  value: string
-  editable: boolean
-  onChange: (next: string) => void
-}) {
-  const parts = dateParts(value);
-  const year = Number(parts.year) || new Date().getFullYear();
-  const month = Number(parts.month) || 0;
-  const day = Number(parts.day) || 0;
-  const years = useMemo(() => {
-    const now = new Date().getFullYear();
-    return Array.from({ length: 12 }, (_, index) => String(now - 2 + index));
-  }, []);
-  const months = [
-    ["01", "Jan"], ["02", "Feb"], ["03", "Mar"], ["04", "Apr"],
-    ["05", "May"], ["06", "Jun"], ["07", "Jul"], ["08", "Aug"],
-    ["09", "Sep"], ["10", "Oct"], ["11", "Nov"], ["12", "Dec"],
-  ];
-  const daysInMonth = month ? new Date(year, month, 0).getDate() : 31;
-  const days = Array.from({ length: daysInMonth }, (_, index) => String(index + 1).padStart(2, "0"));
-
-  function setPart(next: { year?: string; month?: string; day?: string }) {
-    if (!editable) return;
-    const y = next.year ?? parts.year;
-    const m = next.month ?? parts.month;
-    const d = next.day ?? parts.day;
-    if (y && m && d) onChange(`${y}-${m}-${d}`);
-    else if (y && m) onChange(`${y}-${m}-`);
-    else if (y) onChange(`${y}-`);
-    else onChange("");
-  }
-
-  return (
-    <View style={{ gap: 10 }}>
-      <Text style={ui.meta}>{parts.year && parts.month && parts.day ? `${parts.day}/${parts.month}/${parts.year}` : "Pick year, month, then day"}</Text>
-      <Text style={ui.label}>Year</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        {years.map((item) => {
-          const active = parts.year === item;
-          return (
-            <Pressable
-              key={item}
-              disabled={!editable}
-              onPress={() => setPart({ year: item, day: parts.day && Number(parts.day) > new Date(Number(item), Number(parts.month || 1), 0).getDate() ? "" : parts.day })}
-              style={{
-                minHeight: 40,
-                paddingHorizontal: 12,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: active ? colors.button : colors.white,
-                borderWidth: 1,
-                borderColor: active ? colors.button : "rgba(15, 23, 42, 0.12)",
-              }}
-            >
-              <Text style={{ color: active ? colors.onButton : colors.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>{item}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-      <Text style={ui.label}>Month</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {months.map(([value, label]) => {
-          const active = parts.month === value;
-          return (
-            <Pressable
-              key={value}
-              disabled={!editable}
-              onPress={() => setPart({ month: value })}
-              style={{
-                minHeight: 40,
-                paddingHorizontal: 12,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: active ? colors.button : colors.white,
-                borderWidth: 1,
-                borderColor: active ? colors.button : "rgba(15, 23, 42, 0.12)",
-              }}
-            >
-              <Text style={{ color: active ? colors.onButton : colors.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      {parts.month ? (
-        <>
-          <Text style={ui.label}>Day</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {days.map((item) => {
-              const active = parts.day === item;
-              return (
-                <Pressable
-                  key={item}
-                  disabled={!editable}
-                  onPress={() => setPart({ day: item })}
-                  style={{
-                    width: 44,
-                    minHeight: 40,
-                    borderRadius: 12,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: active ? colors.button : colors.white,
-                    borderWidth: 1,
-                    borderColor: active ? colors.button : "rgba(15, 23, 42, 0.12)",
-                  }}
-                >
-                  <Text style={{ color: active ? colors.onButton : colors.ink, fontFamily: fonts.display, fontSize: 13, fontWeight: "600" }}>{Number(item)}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
-    </View>
-  );
-}
-
 function FieldAnswer({
   field,
   value,
@@ -179,27 +50,80 @@ function FieldAnswer({
       return <Text style={ui.body}>This question has no options yet. Ask the office to add choices.</Text>;
     }
     return (
-      <Chips
-        options={field.choices.map((choice) => ({ value: choice, label: choice }))}
-        value={value}
-        onChange={(choice) => {
-          if (!locked) onChange(choice);
-        }}
-      />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {field.choices.map((choice) => {
+          const active = value === choice;
+          return (
+            <Pressable
+              key={choice}
+              disabled={locked}
+              onPress={() => onChange(choice)}
+              style={{
+                minHeight: 36,
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: active ? "#f8fafc" : colors.white,
+                borderWidth: 1,
+                borderColor: active ? "#1e293b" : "rgba(15, 23, 42, 0.14)",
+              }}
+            >
+              <Text
+                style={{
+                  color: active ? "#0f172a" : "#334155",
+                  fontFamily: fonts.display,
+                  fontSize: 14,
+                  fontWeight: active ? "600" : "500",
+                }}
+              >
+                {choice}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     );
   }
   if (field.kind === "date") {
-    return <DateAnswer value={value} editable={!locked} onChange={onChange} />;
+    return (
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor={colors.placeholder}
+        editable={!locked}
+        autoCapitalize="none"
+        style={{
+          minHeight: 44,
+          paddingVertical: 10,
+          borderBottomWidth: 1,
+          borderBottomColor: "rgba(15, 23, 42, 0.18)",
+          fontFamily: fonts.body,
+          fontSize: 16,
+          color: colors.ink,
+        }}
+      />
+    );
   }
   return (
     <TextInput
       value={value}
       onChangeText={onChange}
-      placeholder={field.kind === "long" ? "Write your answer" : "Your answer"}
+      placeholder={field.kind === "long" ? "Write your reply" : "Your reply"}
       placeholderTextColor={colors.placeholder}
       editable={!locked}
       multiline={field.kind === "long"}
-      style={[ui.field, { backgroundColor: colors.page, borderWidth: 0 }, field.kind === "long" ? { minHeight: 120, textAlignVertical: "top" } : null]}
+      style={{
+        minHeight: field.kind === "long" ? 96 : 44,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(15, 23, 42, 0.18)",
+        fontFamily: fonts.body,
+        fontSize: 16,
+        color: colors.ink,
+        textAlignVertical: field.kind === "long" ? "top" : "center",
+      }}
     />
   );
 }
@@ -307,7 +231,6 @@ export default function FormScreen() {
   const [tone, setTone] = useState<"error" | "ok">("error");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
 
   const load = useCallback(async (keepNote = false) => {
     try {
@@ -361,7 +284,6 @@ export default function FormScreen() {
       );
       setMessage(note);
       setTone("ok");
-      setEditing(false);
       await load(true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not send that.");
@@ -372,57 +294,27 @@ export default function FormScreen() {
   }
 
   const locked = !form || form.closed || !canSend || !flat;
-  const showRead = Boolean(form && (form.closed || (form.submitted && !editing)));
-  const showEdit = Boolean(form && !form.closed && (!form.submitted || editing) && canSend && flat);
 
   return (
     <Screen title={form?.title || "Enquiry"} onRefresh={load} busy={!ready && !message}>
       {form?.note ? <HtmlBody html={form.note} /> : null}
       {message ? <Banner text={message} tone={tone} /> : null}
+      {form?.closed ? <Text style={ui.body}>This form is closed.</Text> : null}
+      {form?.submitted && !form.closed ? (
+        <Text style={[ui.meta, { marginBottom: 4 }]}>
+          Your replies are filled in. Change any line and save.
+        </Text>
+      ) : null}
       {!canSend && form ? <Banner text="You can look at this. You cannot change it." /> : null}
       {!flat && form ? <Banner text="Link a home to this account before sending." /> : null}
       {form?.homes != null ? <Text style={ui.meta}>{form.homes} homes have replied.</Text> : null}
       {form?.results === "admins" && !form.community.length && form.homes == null ? (
         <Banner text="Only admins can see every home’s replies on this enquiry." />
       ) : null}
-      {form && showRead ? (
-        <Panel>
-          <Text style={ui.meta}>
-            Your reply{form.closed ? " · closed" : ""}
-          </Text>
-          {form.fields.map((field, index) => (
-            <View
-              key={field.id}
-              style={{
-                gap: 4,
-                paddingTop: index === 0 ? 8 : 12,
-                borderTopWidth: index === 0 ? 0 : 1,
-                borderTopColor: colors.line,
-              }}
-            >
-              <Text style={ui.meta}>{field.label}</Text>
-              <HtmlBody
-                html={(values[field.id] || "").trim() || "—"}
-                style={{ color: colors.ink }}
-              />
-            </View>
-          ))}
-          {!form.closed && canSend && flat ? (
-            <Pressable onPress={() => setEditing(true)} style={[ui.button, { marginTop: 8 }]}>
-              <Text style={ui.buttonText}>Change reply</Text>
-            </Pressable>
-          ) : null}
-        </Panel>
-      ) : null}
-      {form && showEdit ? (
+      {form ? (
         <>
-          {form.submitted ? (
-            <Pressable onPress={() => setEditing(false)}>
-              <Text style={[ui.meta, { textAlign: "right" }]}>Cancel</Text>
-            </Pressable>
-          ) : null}
-          <Panel>
-            <Text style={ui.label}>Phone for this home</Text>
+          <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+            <Text style={ui.meta}>Phone for this home</Text>
             <TextInput
               value={phone}
               onChangeText={setPhone}
@@ -430,15 +322,35 @@ export default function FormScreen() {
               placeholderTextColor={colors.placeholder}
               keyboardType="phone-pad"
               editable={!locked}
-              style={[ui.field, { backgroundColor: colors.page, borderWidth: 0 }]}
+              style={{
+                minHeight: 44,
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: "rgba(15, 23, 42, 0.18)",
+                fontFamily: fonts.body,
+                fontSize: 16,
+                color: colors.ink,
+              }}
             />
-          </Panel>
-          <Panel>
+          </View>
+          <View>
             {form.fields.map((field, index) => (
-              <View key={field.id} style={{ gap: 8, paddingTop: index === 0 ? 0 : 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: colors.line }}>
-                <Text style={[ui.body, { color: colors.ink, fontFamily: fonts.display, fontWeight: "600" }]}>
+              <View
+                key={field.id}
+                style={{
+                  gap: 10,
+                  paddingVertical: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.line,
+                }}
+              >
+                <Text style={[ui.meta, { fontVariant: ["tabular-nums"] }]}>
+                  {index + 1}
+                  <Text style={{ color: "#94a3b8" }}> / {form.fields.length}</Text>
+                </Text>
+                <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 16, fontWeight: "600", lineHeight: 22 }}>
                   {field.label}
-                  {field.required ? <Text style={ui.meta}> · required</Text> : null}
+                  {field.required ? <Text style={{ color: "#94a3b8", fontWeight: "500" }}> required</Text> : null}
                 </Text>
                 <FieldAnswer
                   field={field}
@@ -448,14 +360,16 @@ export default function FormScreen() {
                 />
               </View>
             ))}
-          </Panel>
-          <Pressable onPress={send} disabled={saving} style={ui.button}>
-            <Text style={ui.buttonText}>{saving ? "Sending…" : form.submitted ? "Save reply" : "Send"}</Text>
-          </Pressable>
+          </View>
+          {!locked ? (
+            <Pressable onPress={send} disabled={saving} style={ui.button}>
+              <Text style={ui.buttonText}>{saving ? "Saving…" : form.submitted ? "Save reply" : "Send reply"}</Text>
+            </Pressable>
+          ) : null}
+          {form.results === "community" || form.results === "link" || form.community.length > 0 ? (
+            <FormResults fields={form.fields} community={form.community} flat={flat} />
+          ) : null}
         </>
-      ) : null}
-      {form && (form.results === "community" || form.results === "link" || form.community.length > 0) ? (
-        <FormResults fields={form.fields} community={form.community} flat={flat} />
       ) : null}
     </Screen>
   );
