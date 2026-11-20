@@ -165,7 +165,27 @@ export async function submitPaymentProof(input: {
     .eq("user_id", user.id)
     .maybeSingle();
   dbError(accountError, "Could not load your home.");
-  const flatId = Number(account?.flat_id || 0);
+  let flatId = Number(account?.flat_id || 0);
+  if (!flatId) {
+    const { data: held } = await supabase
+      .from("person_roles")
+      .select("flat_id, role")
+      .eq("user_id", user.id);
+    const homeHeld = (held ?? []).find(
+      (row) =>
+        row.flat_id
+        && (row.role === "owner" || row.role === "co_owner" || row.role === "tenant"),
+    );
+    if (homeHeld?.flat_id) flatId = Number(homeHeld.flat_id);
+  }
+  if (!flatId) {
+    const { data: owned } = await supabase
+      .from("flats")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (owned?.id) flatId = Number(owned.id);
+  }
   if (!flatId) throw new Error("Link a home first.");
 
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];

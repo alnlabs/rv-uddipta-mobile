@@ -25,8 +25,9 @@ export default function ResidentTabs() {
 
   useFocusEffect(useCallback(() => {
     let live = true;
-    loadAccount()
-      .then((account) => {
+    (async () => {
+      try {
+        const account = await loadAccount();
         if (!live) return;
         if (account.superAdmin) {
           setBlocked(true);
@@ -35,13 +36,13 @@ export default function ResidentTabs() {
         }
         setShowAdmin(await hasAdminAccess(account));
         setBlocked(false);
-      })
-      .catch(() => {
+      } catch {
         if (live) {
           setShowAdmin(false);
           setBlocked(false);
         }
-      });
+      }
+    })();
     return () => { live = false; };
   }, [router]));
 

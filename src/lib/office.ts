@@ -292,11 +292,36 @@ export async function loadMyHome(flatNumber?: string | null): Promise<NeighbourH
     .eq("user_id", userData.user.id)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message || "Could not load your home.");
-  if (!profile?.flat_id && !flatNumber) return null;
+  let linkedFlatId = profile?.flat_id ? Number(profile.flat_id) : 0;
+  let homeLabel = flatNumber || "";
+  if (!linkedFlatId) {
+    const { data: held } = await supabase
+      .from("person_roles")
+      .select("flat_id, role")
+      .eq("user_id", userData.user.id);
+    const homeHeld = (held ?? []).find(
+      (row) =>
+        row.flat_id
+        && (row.role === "owner" || row.role === "co_owner" || row.role === "tenant"),
+    );
+    if (homeHeld?.flat_id) linkedFlatId = Number(homeHeld.flat_id);
+  }
+  if (!linkedFlatId) {
+    const { data: owned } = await supabase
+      .from("flats")
+      .select("id, flat_number")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    if (owned?.id) {
+      linkedFlatId = Number(owned.id);
+      if (!homeLabel && owned.flat_number) homeLabel = String(owned.flat_number);
+    }
+  }
+  if (!linkedFlatId && !homeLabel) return null;
 
   const seed: NeighbourHome = {
-    home: flatNumber || "",
-    flatId: profile?.flat_id ? Number(profile.flat_id) : undefined,
+    home: homeLabel,
+    flatId: linkedFlatId || undefined,
     wing: "",
     floor: 0,
     type: "",

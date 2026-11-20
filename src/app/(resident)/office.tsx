@@ -8,9 +8,8 @@ import {
   AdminSheet,
   ops,
 } from "@/components/AdminUi";
-import { loadAccount, switchAccountRole } from "@/lib/community";
+import { loadAccount } from "@/lib/community";
 import { featureOn, loadFeatures } from "@/lib/features";
-import { type Account } from "@/lib/place";
 import { canManageArea, loadOfficeDeskSummary, type OfficeDeskSummary } from "@/lib/office";
 import { fonts } from "@/theme";
 
@@ -52,13 +51,6 @@ function StatTile({
   );
 }
 
-function heldOfficeRole(account: Account) {
-  if (account.role === "admin" || account.role === "facility") return account.role;
-  return account.roles.find((item) => item.role === "admin")?.role
-    || account.roles.find((item) => item.role === "facility")?.role
-    || null;
-}
-
 /** Society admin / facility / repairs area owner — Admin tab opens controls. */
 export default function OfficeDeskScreen() {
   const router = useRouter();
@@ -82,19 +74,14 @@ export default function OfficeDeskScreen() {
         return;
       }
 
-      let account = person;
-      const officeRole = heldOfficeRole(account);
-      if (officeRole && account.role !== officeRole) {
-        await switchAccountRole(officeRole);
-        account = await loadAccount();
-      }
-
-      const activeAdmin = account.role === "admin";
-      const activeFacility = account.role === "facility";
-      const holdsAdmin = activeAdmin || account.roles.some((item) => item.role === "admin");
-      const holdsFacility = activeFacility || account.roles.some((item) => item.role === "facility");
+      const account = person;
+      const holdsAdmin = account.role === "admin"
+        || account.roles.some((item) => item.role === "admin");
+      const holdsFacility = account.role === "facility"
+        || account.roles.some((item) => item.role === "facility")
+        || holdsAdmin;
       setIsAdmin(holdsAdmin);
-      setIsFacility(holdsAdmin || holdsFacility);
+      setIsFacility(holdsFacility);
       setCanJobs(holdsAdmin || holdsFacility || repairsDesk);
       setFeatures(enabled);
 
@@ -104,19 +91,10 @@ export default function OfficeDeskScreen() {
         return;
       }
 
-      if (!activeAdmin && !activeFacility && !repairsDesk) {
-        setSummary(null);
-        setMessage(
-          officeRole
-            ? `Could not switch to ${officeRole}. Open Profile, switch to Admin, then open this tab again.`
-            : "No society admin or facility role on this account.",
-        );
-        return;
-      }
-
+      // Do not auto-switch active role — Admin is a desk, not a forced persona change.
       const next = await loadOfficeDeskSummary({
-        admin: activeAdmin || holdsAdmin,
-        facility: activeAdmin || activeFacility || holdsFacility || repairsDesk,
+        admin: holdsAdmin,
+        facility: holdsFacility || repairsDesk,
       });
       setSummary(next);
       setMessage("");

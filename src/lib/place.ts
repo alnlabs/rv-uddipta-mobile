@@ -11,7 +11,7 @@ export type Account = {
   place: string
   roles: AccountRole[]
   canSwitch: boolean
-  /** True when profiles.flat_id is set (invite / complaints), even if the public flat label failed to load. */
+  /** True when a home is linked (profile, person_roles, or ownership). */
   hasFlat: boolean
   flatNumber: string | null
   wing: string | null
@@ -45,33 +45,13 @@ export function pathForAccount(account: Account) {
 }
 
 /**
- * Shells this account may open. Gate/work follow the *active* role (APIs/RLS do too).
- * Facility also keeps home so Manage (bookings/jobs) under /(resident) still works.
+ * One primary shell per active role. Cross-shell moves go through Profile role switch.
  * Super stays in /(super) only.
  */
 export function placesForAccount(account: Pick<Account, "role" | "superAdmin" | "place" | "needsJoin" | "joinPending" | "joinBrowse">) {
   if (account.superAdmin) return ["office"];
   if (account.needsJoin || account.joinPending || account.joinBrowse) return ["public"];
-  const places = new Set<string>([account.place]);
-  const role = account.role;
-
-  if (
-    role === "owner"
-    || role === "co_owner"
-    || role === "tenant"
-    || role === "admin"
-    || role === "builder"
-    || role === "committee"
-    || role === "visitor"
-    || role === "facility"
-  ) {
-    places.add("home");
-  }
-  if (role === "staff" || role === "facility" || role === "admin") places.add("work");
-  // Builder (default repairs owner) keeps home; jobs live under /(resident)/jobs via Admin.
-  if (role === "security") places.add("gate");
-
-  return [...places];
+  return [account.place || "home"];
 }
 
 export function canAccessPlace(

@@ -32,14 +32,14 @@ export default function ServicesScreen() {
     || featureOn(features, "billing")
     || featureOn(features, "ops")
   );
-  const showAmenities = ready && featureOn(features, "amenities");
+  const showAmenities = ready && hasHome && notVisitor && featureOn(features, "amenities");
   const showParking = ready && hasHome && notVisitor && featureOn(features, "parking");
   const showSpaces = showAmenities || showParking;
   // Flat members create passes (RPC enforces access). Do not hide behind list_my_features.
   const showVisitors = ready && canInvite;
   const showWorkforce = ready && hasHome && notVisitor && featureOn(features, "workforce");
   const showPapers = ready && hasHome && notVisitor && featureOn(features, "documents");
-  const showCirculars = ready && featureOn(features, "circulars");
+  const showCirculars = ready && hasHome && notVisitor && featureOn(features, "circulars");
   const showCommitteeDesk = ready && showCommittee && featureOn(features, "committee");
   const nothingYet = ready && !showHelp && !showBuilding && !showSpaces && !showVisitors && !showWorkforce && !showPapers && !showCirculars && !showCommitteeDesk;
 

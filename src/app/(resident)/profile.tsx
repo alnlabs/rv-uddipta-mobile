@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Panel, SectionLabel } from "@/components/Blocks";
 import { Note, Screen, SignOut } from "@/components/Screen";
-import { loadAccount } from "@/lib/community";
+import { loadAccount, switchAccountRole } from "@/lib/community";
 import {
   loadMyHome,
   relationLabel,
@@ -12,7 +12,7 @@ import {
 } from "@/lib/office";
 import { type Account } from "@/lib/place";
 import { supabase } from "@/lib/supabase";
-import { colors, ui } from "@/theme";
+import { colors, fonts, ui } from "@/theme";
 
 function typeLabel(type: string) {
   if (type === "2BHK") return "2 BHK";
@@ -97,6 +97,7 @@ export default function ProfileScreen() {
   const [home, setHome] = useState<NeighbourHome | null>(null);
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -188,9 +189,53 @@ export default function ProfileScreen() {
               {email ? <Text style={ui.body}>{email}</Text> : null}
               {phone ? <Text style={ui.body}>{phone}</Text> : null}
               {account.roles.length > 1 ? (
-                <Text style={ui.meta}>
-                  Roles · {account.roles.map((item) => item.label).join(", ")}
-                </Text>
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  <Text style={ui.meta}>Switch role</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {account.roles.map((item) => {
+                      const active = account.role === item.role;
+                      return (
+                        <Pressable
+                          key={item.role}
+                          disabled={switching || active}
+                          onPress={async () => {
+                            if (switching || active) return;
+                            setSwitching(true);
+                            try {
+                              await switchAccountRole(item.role);
+                              await load();
+                            } catch (error) {
+                              setMessage(error instanceof Error ? error.message : "Could not switch role.");
+                            } finally {
+                              setSwitching(false);
+                            }
+                          }}
+                          style={{
+                            minHeight: 36,
+                            paddingHorizontal: 12,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: active ? colors.button : colors.line,
+                            backgroundColor: active ? colors.button : colors.white,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: active ? colors.onButton : colors.ink,
+                              fontFamily: fonts.display,
+                              fontSize: 13,
+                              fontWeight: "600",
+                            }}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
               ) : null}
               {account.home ? <Note text={account.home} /> : null}
             </View>
