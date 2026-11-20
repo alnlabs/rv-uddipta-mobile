@@ -188,7 +188,9 @@ export default function ProfileScreen() {
             <View style={{ gap: 6, marginTop: 12 }}>
               {email ? <Text style={ui.body}>{email}</Text> : null}
               {phone ? <Text style={ui.body}>{phone}</Text> : null}
-              {account.roles.length > 1 ? (
+              {account.roles.some((item) =>
+                item.role === "security" || item.role === "staff" || item.role === "facility",
+              ) && account.roles.length > 1 ? (
                 <View style={{ gap: 8, marginTop: 4 }}>
                   <Text style={ui.meta}>Switch role</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
